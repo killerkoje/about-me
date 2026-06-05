@@ -41,7 +41,7 @@ async function ghFetch<T>(token: string, path: string): Promise<T> {
 }
 
 /**
- * Authenticated user's repos (forks excluded).
+ * Authenticated user's repos (all, including forks).
  */
 export async function fetchUserRepos(token: string): Promise<GithubRepo[]> {
   const all: GithubRepo[] = []
@@ -49,13 +49,13 @@ export async function fetchUserRepos(token: string): Promise<GithubRepo[]> {
   while (true) {
     const batch = await ghFetch<GithubRepo[]>(
       token,
-      `/user/repos?per_page=100&page=${page}&sort=updated&affiliation=owner`
+      `/user/repos?per_page=100&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member&visibility=all`
     )
     all.push(...batch)
     if (batch.length < 100) break
     page++
   }
-  return all.filter(r => !r.fork)
+  return all
 }
 
 /**
