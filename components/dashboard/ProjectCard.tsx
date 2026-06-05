@@ -16,8 +16,12 @@ export default function ProjectCard({ project, dragHandle }: { project: Project;
   const [editing, setEditing] = useState(false)
 
   async function handleUpdate(data: Omit<Project, 'id' | 'user_id' | 'created_at' | 'order'>) {
-    await updateProject(project.id, data)
-    setEditing(false)
+    try {
+      await updateProject(project.id, data)
+      setEditing(false)
+    } catch {
+      // form's own error state will show the error
+    }
   }
 
   if (editing) {
@@ -68,7 +72,9 @@ export default function ProjectCard({ project, dragHandle }: { project: Project;
           <button onClick={() => setEditing(true)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
             <Pencil size={13} />
           </button>
-          <button onClick={() => deleteProject(project.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+          <button onClick={() => {
+            if (confirm('프로젝트를 삭제하시겠습니까?')) deleteProject(project.id)
+          }} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
             <Trash2 size={13} />
           </button>
         </div>

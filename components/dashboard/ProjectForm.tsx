@@ -16,10 +16,12 @@ export default function ProjectForm({ initial, onSubmit, onCancel }: Props) {
   const [demoUrl, setDemoUrl] = useState(initial?.demo_url ?? '')
   const [status, setStatus] = useState<Project['status']>(initial?.status ?? 'wip')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setError(null)
     try {
       await onSubmit({
         title,
@@ -30,6 +32,8 @@ export default function ProjectForm({ initial, onSubmit, onCancel }: Props) {
         thumbnail: null,
         status,
       })
+    } catch {
+      setError('저장에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setLoading(false)
     }
@@ -80,6 +84,7 @@ export default function ProjectForm({ initial, onSubmit, onCancel }: Props) {
           {loading ? '저장 중...' : '저장'}
         </button>
       </div>
+      {error && <p className="text-xs text-red-500 text-center">{error}</p>}
     </form>
   )
 }

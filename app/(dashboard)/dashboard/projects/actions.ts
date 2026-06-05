@@ -13,7 +13,7 @@ export async function createProject(data: Omit<Project, 'id' | 'user_id' | 'crea
   revalidatePath('/dashboard/projects')
 }
 
-export async function updateProject(id: string, data: Partial<Project>) {
+export async function updateProject(id: string, data: Partial<Omit<Project, 'id' | 'user_id' | 'created_at'>>) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
@@ -38,10 +38,12 @@ export async function updateProjectOrder(ids: string[]) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  await Promise.all(
+  const results = await Promise.all(
     ids.map((id, index) =>
       supabase.from('projects').update({ order: index }).eq('id', id).eq('user_id', user.id)
     )
   )
+  const failed = results.find(r => r.error)
+  if (failed?.error) throw failed.error
   revalidatePath('/dashboard/projects')
 }
