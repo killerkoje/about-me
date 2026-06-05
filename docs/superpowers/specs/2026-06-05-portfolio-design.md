@@ -119,6 +119,10 @@ careers
 - `SELECT` → 전체 공개 (공개 포트폴리오 조회)
 - `INSERT / UPDATE / DELETE` → `auth.uid() = user_id` 인 경우만 허용
 
+**주의사항:**
+- `users` 테이블은 Supabase `auth.users`와 별개 — 최초 로그인 시 DB trigger로 자동 생성
+- `[username]` 라우트가 `login`, `dashboard`, `api` 경로와 충돌하지 않도록 예약어 목록 관리 필요
+
 ---
 
 ## 5. 페이지 & 기능
