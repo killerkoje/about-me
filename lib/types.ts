@@ -1,3 +1,10 @@
+export type GithubStats = {
+  total_commits: number
+  stars: number
+  followers: number
+  top_languages: string[]
+}
+
 export type User = {
   id: string
   username: string
@@ -8,6 +15,8 @@ export type User = {
   github_url: string | null
   email: string | null
   is_open_to_work: boolean
+  github_stats: GithubStats | null
+  anthropic_api_key: string | null
   created_at: string
 }
 
