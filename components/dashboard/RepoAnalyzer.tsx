@@ -2,13 +2,16 @@
 import { useState } from 'react'
 import {
   GitBranch, Loader2, ChevronLeft, ChevronRight,
-  Star, ExternalLink, FileText, Code2, GitCommit, Sparkles,
+  Star, ExternalLink, FileText, Code2, GitCommit, Sparkles, Check,
 } from 'lucide-react'
-import { getMyRepos, fetchSingleRepoData, getRepoCommitsPaged } from '@/app/(dashboard)/dashboard/github/actions'
-import type { SingleRepoData } from '@/app/(dashboard)/dashboard/github/actions'
+import {
+  getMyRepos, fetchSingleRepoData, getRepoCommitsPaged,
+  analyzeRepoWithAI, saveProjectFromRepo,
+} from '@/app/(dashboard)/dashboard/github/actions'
+import type { SingleRepoData, RepoAIAnalysis } from '@/app/(dashboard)/dashboard/github/actions'
 import type { GithubRepo } from '@/lib/github/api'
 
-type Step = 'idle' | 'loading-repos' | 'selecting' | 'loading-data' | 'ready'
+type Step = 'idle' | 'loading-repos' | 'selecting' | 'loading-data' | 'ready' | 'analyzing' | 'analyzed' | 'saved'
 
 const LANG_COLORS: Record<string, string> = {
   TypeScript: 'bg-blue-100 text-blue-700',
@@ -45,6 +48,8 @@ export default function RepoAnalyzer() {
   const [commits, setCommits] = useState<SingleRepoData['commits']>([])
   const [hasMoreCommits, setHasMoreCommits] = useState(false)
   const [loadingCommits, setLoadingCommits] = useState(false)
+  const [analysis, setAnalysis] = useState<RepoAIAnalysis | null>(null)
+  const [saving, setSaving] = useState(false)
 
   async function handleStart() {
     setStep('loading-repos')
@@ -97,6 +102,34 @@ export default function RepoAnalyzer() {
     setStep('selecting')
     setRepoData(null)
     setError(null)
+    setAnalysis(null)
+  }
+
+  async function handleAnalyze() {
+    if (!selectedRepo) return
+    setStep('analyzing')
+    setError(null)
+    try {
+      const result = await analyzeRepoWithAI(selectedRepo)
+      setAnalysis(result)
+      setStep('analyzed')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'AI 분석에 실패했습니다.')
+      setStep('ready')
+    }
+  }
+
+  async function handleSave() {
+    if (!analysis || !selectedRepo) return
+    setSaving(true)
+    try {
+      await saveProjectFromRepo(selectedRepo, analysis.description, analysis.tech_stack)
+      setStep('saved')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   // ── idle ──────────────────────────────────────────────────────
@@ -345,13 +378,117 @@ export default function RepoAnalyzer() {
             <p className="text-xs text-gray-500 mt-0.5">커밋 내역과 README를 기반으로 포트폴리오 설명을 생성합니다</p>
           </div>
           <button
-            disabled
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium opacity-40 cursor-not-allowed"
+            onClick={handleAnalyze}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
           >
             <Sparkles size={15} /> AI 분석 시작
           </button>
         </div>
 
+      </div>
+    )
+  }
+
+  // ── analyzing ─────────────────────────────────────────────────
+  if (step === 'analyzing') {
+    return (
+      <div className="flex flex-col items-center py-20 gap-5">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center">
+            <Sparkles size={28} className="text-indigo-500 animate-pulse" />
+          </div>
+          <Loader2 size={18} className="animate-spin text-indigo-400 absolute -bottom-1 -right-1" />
+        </div>
+        <div className="text-center">
+          <p className="font-semibold text-gray-900">AI가 분석 중입니다...</p>
+          <p className="text-sm text-gray-500 mt-1">커밋 내역 · README · 사용 언어를 종합 분석 중</p>
+          <p className="text-xs text-gray-400 mt-1">약 10~20초 소요됩니다</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── analyzed ──────────────────────────────────────────────────
+  if (step === 'analyzed' && analysis && repoData) {
+    return (
+      <div className="max-w-2xl flex flex-col gap-5">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setStep('ready')} className="text-gray-400 hover:text-gray-600">
+            <ChevronLeft size={18} />
+          </button>
+          <div>
+            <h2 className="font-bold text-gray-900 text-base">{repoData.repoName} — AI 분석 결과</h2>
+            <p className="text-xs text-indigo-500 flex items-center gap-1 mt-0.5">
+              <Sparkles size={10} /> 커밋 내역과 README 기반으로 생성됨
+            </p>
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-red-500">{error}</p>}
+
+        {/* 분석 결과 */}
+        <div className="border border-indigo-100 rounded-2xl p-5 bg-indigo-50/30">
+          <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{analysis.description}</p>
+        </div>
+
+        {/* 기술 스택 */}
+        {analysis.tech_stack.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">기술 스택</p>
+            <div className="flex flex-wrap gap-2">
+              {analysis.tech_stack.map(t => (
+                <span key={t} className={`text-xs px-2.5 py-1 rounded-lg font-medium ${langColor(t)}`}>{t}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 등록 버튼 */}
+        <div className="flex items-center justify-between pt-2">
+          <button
+            onClick={() => setStep('ready')}
+            className="text-sm text-gray-400 hover:text-gray-600"
+          >
+            데이터로 돌아가기
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            프로젝트로 등록
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── saved ─────────────────────────────────────────────────────
+  if (step === 'saved' && repoData) {
+    return (
+      <div className="flex flex-col items-center py-16 gap-4">
+        <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center">
+          <Check size={26} className="text-emerald-500" />
+        </div>
+        <div className="text-center">
+          <h2 className="font-semibold text-gray-900 mb-1">등록 완료!</h2>
+          <p className="text-sm text-gray-500">{repoData.repoName} 프로젝트가 추가되었습니다</p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => { setStep('selecting'); setRepoData(null); setAnalysis(null); }}
+            className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2 border border-gray-200 rounded-xl"
+          >
+            다른 레포 분석하기
+          </button>
+          <a
+            href="/dashboard/projects"
+            className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700"
+          >
+            프로젝트 확인 <ChevronRight size={14} />
+          </a>
+        </div>
       </div>
     )
   }

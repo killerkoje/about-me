@@ -144,6 +144,87 @@ export async function getMyRepos(): Promise<GithubRepo[]> {
   return fetchUserRepos(token)
 }
 
+// ── AI 분석 + 프로젝트 저장 ────────────────────────────────────
+
+export type RepoAIAnalysis = {
+  description: string
+  tech_stack: string[]
+}
+
+export async function analyzeRepoWithAI(repoFullName: string): Promise<RepoAIAnalysis> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('anthropic_api_key, github_token')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.anthropic_api_key) {
+    throw new Error('Anthropic API 키가 없습니다. 설정에서 먼저 등록해주세요.')
+  }
+  if (!profile?.github_token) {
+    throw new Error('GitHub 토큰을 찾을 수 없습니다. 로그아웃 후 다시 로그인해주세요.')
+  }
+
+  const anthropicKey = decrypt(profile.anthropic_api_key)
+  const token = decrypt(profile.github_token)
+  const githubUsername = (user.user_metadata?.user_name ?? '') as string
+
+  const [repo, languages, commitMessages, readme] = await Promise.all([
+    fetchRepo(token, repoFullName),
+    fetchRepoLanguages(token, repoFullName),
+    fetchRepoCommits(token, repoFullName, githubUsername),
+    fetchRepoReadme(token, repoFullName),
+  ])
+
+  const tech_stack = Object.keys(languages).slice(0, 6)
+
+  const summary = await summarizeProjectFromCommits(
+    anthropicKey,
+    repo.name,
+    commitMessages,
+    tech_stack,
+    repo.description,
+    readme
+  )
+
+  const description = summary.description
+    + (summary.tech_highlights.length > 0
+      ? `\n\n주요 구현: ${summary.tech_highlights.join(' · ')}`
+      : '')
+
+  return { description, tech_stack }
+}
+
+export async function saveProjectFromRepo(
+  repoFullName: string,
+  description: string,
+  techStack: string[]
+): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const token = await getGithubToken(supabase, user.id)
+  const repo = await fetchRepo(token, repoFullName)
+
+  await supabase.from('projects').insert({
+    user_id: user.id,
+    title: repo.name,
+    description,
+    tech_stack: techStack,
+    github_url: repo.html_url,
+    demo_url: repo.homepage || null,
+    status: 'live' as const,
+    order: 0,
+  })
+
+  revalidatePath('/dashboard/projects')
+}
+
 // ── 단일 레포 데이터 조회 ─────────────────────────────────────
 
 export type SingleRepoData = {
