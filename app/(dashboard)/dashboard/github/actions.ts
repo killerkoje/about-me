@@ -144,6 +144,55 @@ export async function getMyRepos(): Promise<GithubRepo[]> {
   return fetchUserRepos(token)
 }
 
+// ── 단일 레포 데이터 조회 ─────────────────────────────────────
+
+export type SingleRepoData = {
+  repoName: string
+  fullName: string
+  description: string | null
+  htmlUrl: string
+  homepage: string | null
+  stars: number
+  languages: Record<string, number>
+  commits: Array<{ sha: string; message: string; author: string; date: string }>
+  readme: string | null
+  defaultBranch: string
+}
+
+export async function fetchSingleRepoData(repoFullName: string): Promise<SingleRepoData> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const token = await getGithubToken(supabase, user.id)
+  const githubUsername = (user.user_metadata?.user_name ?? '') as string
+
+  const [repo, languages, commitObjs, readme] = await Promise.all([
+    fetchRepo(token, repoFullName),
+    fetchRepoLanguages(token, repoFullName),
+    fetchRepoCommitsFull(token, repoFullName, githubUsername, 1, 30),
+    fetchRepoReadme(token, repoFullName),
+  ])
+
+  return {
+    repoName: repo.name,
+    fullName: repo.full_name,
+    description: repo.description,
+    htmlUrl: repo.html_url,
+    homepage: repo.homepage,
+    stars: repo.stargazers_count,
+    languages,
+    commits: commitObjs.map(c => ({
+      sha: c.sha.slice(0, 7),
+      message: c.commit.message.split('\n')[0].trim(),
+      author: c.commit.author.name,
+      date: c.commit.author.date,
+    })),
+    readme,
+    defaultBranch: repo.default_branch,
+  }
+}
+
 // ── 1단계: GitHub 데이터 수집 ─────────────────────────────────
 
 export type RepoRawData = {
