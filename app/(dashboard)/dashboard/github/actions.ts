@@ -62,19 +62,29 @@ export async function analyzeRepo(repoFullName: string): Promise<RepoAnalysis> {
   ])
 
   const tech_stack = Object.keys(languages).slice(0, 8)
+  const repoName = repoFullName.split('/')[1]
 
-  const summary = await summarizeProjectFromCommits(
-    anthropicKey,
-    repoFullName.split('/')[1],
-    commits,
-    tech_stack,
-    repo?.description ?? null
-  )
+  let description = repo.description ?? ''
+  let finalTechStack = tech_stack
+
+  try {
+    const summary = await summarizeProjectFromCommits(
+      anthropicKey,
+      repoName,
+      commits,
+      tech_stack,
+      repo.description ?? null
+    )
+    if (summary.description) description = summary.description
+    if (summary.tech_highlights.length > 0) finalTechStack = summary.tech_highlights
+  } catch {
+    // Claude 실패 시 기본값 사용
+  }
 
   return {
-    title: repoFullName.split('/')[1],
-    description: summary.description || repo?.description || '',
-    tech_stack: summary.tech_highlights.length > 0 ? summary.tech_highlights : tech_stack,
+    title: repoName,
+    description,
+    tech_stack: finalTechStack,
     github_url: repo.html_url,
     demo_url: repo.homepage ?? '',
   }
