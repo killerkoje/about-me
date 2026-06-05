@@ -18,9 +18,9 @@ export default function PortfolioProjectCard({ project }: { project: Project }) 
         </span>
       </div>
       {project.description && <p className="text-sm text-gray-500 mb-3 leading-relaxed">{project.description}</p>}
-      {project.tech_stack.length > 0 && (
+      {(project.tech_stack ?? []).length > 0 && (
         <div className="flex gap-1.5 flex-wrap mb-3">
-          {project.tech_stack.map((t, i) => (
+          {(project.tech_stack ?? []).map((t, i) => (
             <span key={`${t}-${i}`} className="text-[10px] bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 font-mono text-gray-600">{t}</span>
           ))}
         </div>

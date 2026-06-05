@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
+import { cache } from 'react'
 import PortfolioProfileHero from '@/components/portfolio/PortfolioProfileHero'
 import PortfolioProjectCard from '@/components/portfolio/PortfolioProjectCard'
 import PortfolioSkillCard from '@/components/portfolio/PortfolioSkillCard'
@@ -8,14 +9,21 @@ import PortfolioCareerCard from '@/components/portfolio/PortfolioCareerCard'
 
 type Props = { params: Promise<{ username: string }> }
 
+const getUser = cache(async (username: string) => {
+  const supabase = await createClient()
+  const { data } = await supabase.from('users').select('*').eq('username', username).single()
+  return data
+})
+
+const getUserMeta = cache(async (username: string) => {
+  const supabase = await createClient()
+  const { data } = await supabase.from('users').select('name, bio, avatar_url').eq('username', username).single()
+  return data
+})
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params
-  const supabase = await createClient()
-  const { data: user } = await supabase
-    .from('users')
-    .select('name, bio, avatar_url')
-    .eq('username', username)
-    .single()
+  const user = await getUserMeta(username)
   if (!user) return { title: '404' }
   return {
     title: `${user.name ?? username} | devfolio`,
@@ -30,15 +38,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PortfolioPage({ params }: Props) {
   const { username } = await params
-  const supabase = await createClient()
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('*')
-    .eq('username', username)
-    .single()
+  const user = await getUser(username)
   if (!user) notFound()
 
+  const supabase = await createClient()
   const [{ data: projects }, { data: skills }, { data: careers }] = await Promise.all([
     supabase.from('projects').select('*').eq('user_id', user.id).neq('status', 'archived').order('order'),
     supabase.from('skills').select('*').eq('user_id', user.id).order('order'),

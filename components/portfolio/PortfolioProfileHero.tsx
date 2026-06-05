@@ -1,11 +1,18 @@
 import type { User } from '@/lib/types'
 import { MapPin, GitBranch } from 'lucide-react'
+import Image from 'next/image'
 
 export default function PortfolioProfileHero({ user }: { user: User }) {
   return (
     <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-6 flex items-center gap-5 text-white shadow-lg">
       {user.avatar_url && (
-        <img src={user.avatar_url} alt={user.name ?? ''} className="w-16 h-16 rounded-full border-2 border-white/40 flex-shrink-0" />
+        <Image
+          src={user.avatar_url}
+          alt={user.name ?? user.username}
+          width={64}
+          height={64}
+          className="rounded-full border-2 border-white/40 flex-shrink-0"
+        />
       )}
       <div className="flex-1 min-w-0">
         <h1 className="text-xl font-bold mb-1">{user.name ?? user.username}</h1>
