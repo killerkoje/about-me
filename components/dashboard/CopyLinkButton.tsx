@@ -7,6 +7,8 @@ export default function CopyLinkButton({ url }: { url: string }) {
   const [error, setError] = useState(false)
 
   async function copy() {
+    setCopied(false)
+    setError(false)
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true)
@@ -20,6 +22,7 @@ export default function CopyLinkButton({ url }: { url: string }) {
   return (
     <button
       onClick={copy}
+      aria-label="포트폴리오 링크 복사"
       className="flex items-center gap-1.5 bg-indigo-600 text-white text-xs px-3 py-2 rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap"
     >
       {copied ? (

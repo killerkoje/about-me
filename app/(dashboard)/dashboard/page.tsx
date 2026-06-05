@@ -17,7 +17,7 @@ export default async function DashboardPage() {
     supabase.from('careers').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
 
-  const portfolioUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${profile?.username}`
+  const portfolioUrl = profile ? `${process.env.NEXT_PUBLIC_APP_URL}/${profile.username}` : ''
 
   const sections = [
     { label: '프로젝트', count: projectCount ?? 0, href: '/dashboard/projects', icon: FolderOpen, color: 'text-indigo-500 bg-indigo-50' },
@@ -62,20 +62,22 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-500 mb-0.5">내 포트폴리오 링크</p>
-          <p className="text-sm font-mono text-indigo-600 font-medium truncate">{portfolioUrl}</p>
+      {profile && (
+        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-500 mb-0.5">내 포트폴리오 링크</p>
+            <p className="text-sm font-mono text-indigo-600 font-medium truncate">{portfolioUrl}</p>
+          </div>
+          <CopyLinkButton url={portfolioUrl} />
+          <Link
+            href={`/${profile.username}`}
+            target="_blank"
+            className="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap"
+          >
+            미리보기 →
+          </Link>
         </div>
-        <CopyLinkButton url={portfolioUrl} />
-        <Link
-          href={`/${profile?.username}`}
-          target="_blank"
-          className="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap"
-        >
-          미리보기 →
-        </Link>
-      </div>
+      )}
     </div>
   )
 }
