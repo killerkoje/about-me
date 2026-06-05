@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { GitBranch, Loader2, Check, ChevronRight, RefreshCw, Key } from 'lucide-react'
 import { getMyRepos, importSelectedRepos } from '@/app/(dashboard)/dashboard/github/actions'
+import type { RepoImportResult } from '@/app/(dashboard)/dashboard/github/actions'
 import type { GithubRepo } from '@/lib/github/api'
 
 type Step = 'idle' | 'loading' | 'selecting' | 'importing' | 'done' | 'error'
@@ -15,7 +16,7 @@ export default function GithubImporter({ hasApiKey }: Props) {
   const [repos, setRepos] = useState<GithubRepo[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [importedCount, setImportedCount] = useState(0)
+  const [results, setResults] = useState<RepoImportResult[]>([])
 
   async function handleFetchRepos() {
     setStep('loading')
@@ -35,8 +36,8 @@ export default function GithubImporter({ hasApiKey }: Props) {
     setStep('importing')
     setErrorMsg(null)
     try {
-      await importSelectedRepos([...selected])
-      setImportedCount(selected.size)
+      const data = await importSelectedRepos([...selected])
+      setResults(data)
       setStep('done')
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : '가져오기에 실패했습니다.')
@@ -58,9 +59,9 @@ export default function GithubImporter({ hasApiKey }: Props) {
     setRepos([])
     setSelected(new Set())
     setErrorMsg(null)
+    setResults([])
   }
 
-  // API 키 없는 경우
   if (!hasApiKey) {
     return (
       <div className="flex flex-col items-center py-16 gap-4 text-center">
@@ -127,28 +128,65 @@ export default function GithubImporter({ hasApiKey }: Props) {
   }
 
   if (step === 'done') {
+    const added = results.filter(r => !r.skipped)
+    const skipped = results.filter(r => r.skipped)
     return (
-      <div className="flex flex-col items-center py-16 gap-4">
-        <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center">
-          <Check size={28} className="text-emerald-500" />
+      <div className="max-w-2xl">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Check size={20} className="text-emerald-500" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-900">분석 완료!</h2>
+            <p className="text-sm text-gray-500">
+              {added.length}개 추가됨{skipped.length > 0 ? ` · ${skipped.length}개 이미 존재` : ''}
+            </p>
+          </div>
         </div>
-        <div className="text-center">
-          <h2 className="font-semibold text-gray-900 mb-1">분석 완료!</h2>
-          <p className="text-sm text-gray-500">
-            {importedCount}개 레포에서 프로젝트와 스킬이 추가되었습니다.
-          </p>
+
+        <div className="flex flex-col gap-3 mb-6">
+          {added.map(r => (
+            <div key={r.repoName} className="border border-gray-100 rounded-2xl p-4 bg-white">
+              <div className="flex items-center gap-2 mb-2">
+                <GitBranch size={14} className="text-gray-400" />
+                <span className="font-medium text-sm text-gray-900">{r.repoName}</span>
+              </div>
+              {r.description && (
+                <p className="text-sm text-gray-600 mb-3 leading-relaxed">{r.description}</p>
+              )}
+              {r.tech_stack.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {r.tech_stack.map(t => (
+                    <span key={t} className="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg font-medium">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          {skipped.map(r => (
+            <div key={r.repoName} className="border border-gray-100 rounded-2xl p-3 bg-gray-50 flex items-center gap-2">
+              <GitBranch size={13} className="text-gray-300" />
+              <span className="text-sm text-gray-400">{r.repoName}</span>
+              <span className="text-xs text-gray-300 ml-auto">이미 존재</span>
+            </div>
+          ))}
         </div>
-        <div className="flex gap-4">
-          <a href="/dashboard/projects" className="flex items-center gap-1 text-sm text-indigo-600 hover:underline">
-            프로젝트 확인 <ChevronRight size={14} />
-          </a>
-          <a href="/dashboard/skills" className="flex items-center gap-1 text-sm text-indigo-600 hover:underline">
-            스킬 확인 <ChevronRight size={14} />
-          </a>
+
+        <div className="flex items-center justify-between">
+          <button onClick={reset} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600">
+            <RefreshCw size={12} /> 다시 분석하기
+          </button>
+          <div className="flex gap-4">
+            <a href="/dashboard/projects" className="flex items-center gap-1 text-sm text-indigo-600 hover:underline">
+              프로젝트 확인 <ChevronRight size={14} />
+            </a>
+            <a href="/dashboard/skills" className="flex items-center gap-1 text-sm text-indigo-600 hover:underline">
+              스킬 확인 <ChevronRight size={14} />
+            </a>
+          </div>
         </div>
-        <button onClick={reset} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 mt-2">
-          <RefreshCw size={12} /> 다시 분석하기
-        </button>
       </div>
     )
   }

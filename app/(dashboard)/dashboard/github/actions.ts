@@ -98,8 +98,15 @@ export async function getMyRepos(): Promise<GithubRepo[]> {
   return fetchUserRepos(token)
 }
 
-export async function importSelectedRepos(repoFullNames: string[]): Promise<void> {
-  if (repoFullNames.length === 0) return
+export type RepoImportResult = {
+  repoName: string
+  description: string
+  tech_stack: string[]
+  skipped: boolean
+}
+
+export async function importSelectedRepos(repoFullNames: string[]): Promise<RepoImportResult[]> {
+  if (repoFullNames.length === 0) return []
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -126,6 +133,7 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<void
   const selected = allRepos.filter(r => repoFullNames.includes(r.full_name))
 
   const languageTotals: Record<string, number> = {}
+  const results: RepoImportResult[] = []
 
   const repoDetails = await Promise.all(
     selected.map(async repo => {
@@ -148,11 +156,15 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<void
       .eq('github_url', repo.html_url)
       .maybeSingle()
 
-    if (existing) continue
+    if (existing) {
+      results.push({ repoName: repo.name, description: '', tech_stack: [], skipped: true })
+      continue
+    }
 
     const tech_stack = Object.keys(languages).slice(0, 6)
+    let description: string = repo.description ?? ''
+    let finalTechStack = tech_stack
 
-    let description: string | null = repo.description
     try {
       const summary = await summarizeProjectFromCommits(
         anthropicKey,
@@ -161,23 +173,27 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<void
         tech_stack,
         repo.description
       )
-      description = summary.description || repo.description
+      if (summary.description) description = summary.description
+      if (summary.tech_highlights.length > 0) finalTechStack = summary.tech_highlights
     } catch {
-      description = repo.description
+      // Claude 실패 시 기본값
     }
 
     await supabase.from('projects').insert({
       user_id: user.id,
       title: repo.name,
       description: description || null,
-      tech_stack,
+      tech_stack: finalTechStack,
       github_url: repo.html_url,
       demo_url: repo.homepage || null,
       status: 'live' as const,
       order: 0,
     })
+
+    results.push({ repoName: repo.name, description, tech_stack: finalTechStack, skipped: false })
   }
 
+  // 스킬 집계
   const sortedLangs = Object.entries(languageTotals)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 15)
@@ -190,12 +206,9 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<void
       .eq('user_id', user.id)
       .eq('name', lang)
       .maybeSingle()
-
     if (existing) continue
-
     const ratio = totalBytes > 0 ? bytes / totalBytes : 0
     const level = Math.max(20, Math.min(95, Math.round(ratio * 300)))
-
     await supabase.from('skills').insert({
       user_id: user.id,
       name: lang,
@@ -205,30 +218,23 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<void
     })
   }
 
+  // GitHub 통계 업데이트
   const [userStats, commitCounts] = await Promise.all([
     fetchUserStats(token, allRepos),
-    Promise.all(
-      selected.map(r => fetchRepoCommitCount(token, r.full_name, githubUsername))
-    ),
+    Promise.all(selected.map(r => fetchRepoCommitCount(token, r.full_name, githubUsername))),
   ])
-
   const total_commits = commitCounts.reduce((s, c) => s + c, 0)
   const top_languages = Object.entries(languageTotals)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([name]) => name)
+    .sort(([, a], [, b]) => b - a).slice(0, 5).map(([name]) => name)
 
   await supabase.from('users').update({
-    github_stats: {
-      total_commits,
-      stars: userStats.total_stars,
-      followers: userStats.followers,
-      top_languages,
-    },
+    github_stats: { total_commits, stars: userStats.total_stars, followers: userStats.followers, top_languages },
   }).eq('id', user.id)
 
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/projects')
   revalidatePath('/dashboard/skills')
   revalidatePath('/dashboard/github')
+
+  return results
 }
