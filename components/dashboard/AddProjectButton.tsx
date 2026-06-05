@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Plus, GitBranch, Loader2, ChevronLeft, Sparkles } from 'lucide-react'
+import { Plus, GitBranch, Loader2, ChevronLeft, Sparkles, Search } from 'lucide-react'
 import ProjectForm from './ProjectForm'
 import { createProject } from '@/app/(dashboard)/dashboard/projects/actions'
 import { getMyRepos, analyzeRepo } from '@/app/(dashboard)/dashboard/github/actions'
@@ -16,6 +16,7 @@ export default function AddProjectButton() {
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [repoError, setRepoError] = useState<string | null>(null)
   const [analyzingRepo, setAnalyzingRepo] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
   const [prefilled, setPrefilled] = useState<Partial<Project> | undefined>(undefined)
 
   function handleOpen() {
@@ -25,6 +26,7 @@ export default function AddProjectButton() {
     setRepoError(null)
     setPrefilled(undefined)
     setAnalyzingRepo(null)
+    setSearch('')
   }
 
   function handleClose() {
@@ -142,11 +144,24 @@ export default function AddProjectButton() {
             )}
             {!loadingRepos && (
               <>
+                <div className="relative mb-2">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="레포 검색..."
+                    className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                </div>
                 <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
                   <Sparkles size={11} /> 레포를 선택하면 커밋 내역을 AI가 분석해서 자동으로 채워줍니다
                 </p>
-                <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto pr-1">
-                  {repos.map(repo => (
+                <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
+                  {repos.filter(r =>
+                    r.name.toLowerCase().includes(search.toLowerCase()) ||
+                    (r.description ?? '').toLowerCase().includes(search.toLowerCase())
+                  ).map(repo => (
                     <button
                       key={repo.id}
                       onClick={() => handleSelectRepo(repo)}
