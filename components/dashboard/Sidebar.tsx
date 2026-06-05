@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FolderOpen, Zap, Briefcase, User, Link2, Eye, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, FolderOpen, Zap, Briefcase, User, Link2, Eye, Settings, LogOut, GitBranch } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/dashboard/skills', icon: Zap, label: '스킬' },
   { href: '/dashboard/career', icon: Briefcase, label: '경력' },
   { href: '/dashboard/about', icon: User, label: '소개' },
+  { href: '/dashboard/github', icon: GitBranch, label: 'GitHub 분석' },
 ]
 
 const publicItems = [
