@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { decrypt } from '@/lib/crypto'
 import {
   fetchUserRepos,
+  fetchAllAccessibleRepos,
   fetchRepo,
   fetchRepoLanguages,
   fetchRepoCommits,
@@ -143,7 +144,8 @@ export async function getMyRepos(): Promise<GithubRepo[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
   const token = await getGithubToken(supabase, user.id)
-  return fetchUserRepos(token)
+  const username = (user.user_metadata?.user_name ?? '') as string
+  return fetchAllAccessibleRepos(token, username)
 }
 
 // ── 전체 파일 수집 ────────────────────────────────────────────

@@ -110,7 +110,7 @@ export async function fetchRepo(token: string, fullName: string): Promise<Github
 }
 
 /**
- * Authenticated user's repos (all, including forks).
+ * Authenticated user's repos via REST (owner / collaborator / org member).
  */
 export async function fetchUserRepos(token: string): Promise<GithubRepo[]> {
   const all: GithubRepo[] = []
@@ -125,6 +125,133 @@ export async function fetchUserRepos(token: string): Promise<GithubRepo[]> {
     page++
   }
   return all
+}
+
+type GraphQLContribResult = {
+  user: {
+    contributionsCollection: {
+      commitContributionsByRepository: Array<{
+        repository: {
+          databaseId: number
+          nameWithOwner: string
+          name: string
+          description: string | null
+          url: string
+          homepageUrl: string | null
+          primaryLanguage: { name: string } | null
+          stargazerCount: number
+          isFork: boolean
+          isPrivate: boolean
+          defaultBranchRef: { name: string } | null
+          updatedAt: string
+        }
+      }>
+    }
+  }
+}
+
+const CONTRIB_QUERY = `
+  query ContributedRepos($login: String!, $from: DateTime!, $to: DateTime!) {
+    user(login: $login) {
+      contributionsCollection(from: $from, to: $to) {
+        commitContributionsByRepository(maxRepositories: 100) {
+          repository {
+            databaseId
+            nameWithOwner
+            name
+            description
+            url
+            homepageUrl
+            primaryLanguage { name }
+            stargazerCount
+            isFork
+            isPrivate
+            defaultBranchRef { name }
+            updatedAt
+          }
+        }
+      }
+    }
+  }
+`
+
+async function ghGraphQL<T>(token: string, query: string, variables: Record<string, unknown>): Promise<T> {
+  const res = await fetch('https://api.github.com/graphql', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables }),
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(`GitHub GraphQL ${res.status}`)
+  const json = await res.json() as { data?: T; errors?: Array<{ message: string }> }
+  if (json.errors?.length) throw new Error(json.errors[0].message)
+  return json.data as T
+}
+
+/**
+ * Repos the user has committed to (last 3 years), via GraphQL contributionsCollection.
+ * Covers repos not in REST /user/repos (e.g. orgs without explicit collaborator access).
+ */
+export async function fetchContributedRepos(token: string, username: string): Promise<GithubRepo[]> {
+  const now = new Date()
+  const yearRanges = [0, 1, 2].map(i => {
+    const to = new Date(now)
+    to.setFullYear(now.getFullYear() - i)
+    const from = new Date(to)
+    from.setFullYear(to.getFullYear() - 1)
+    return { from: from.toISOString(), to: to.toISOString() }
+  })
+
+  const results = await Promise.all(
+    yearRanges.map(({ from, to }) =>
+      ghGraphQL<GraphQLContribResult>(token, CONTRIB_QUERY, { login: username, from, to }).catch(() => null)
+    )
+  )
+
+  const repoMap = new Map<string, GithubRepo>()
+  for (const result of results) {
+    if (!result) continue
+    for (const { repository: r } of result.user.contributionsCollection.commitContributionsByRepository) {
+      if (!repoMap.has(r.nameWithOwner)) {
+        repoMap.set(r.nameWithOwner, {
+          id: r.databaseId,
+          name: r.name,
+          full_name: r.nameWithOwner,
+          description: r.description,
+          html_url: r.url,
+          homepage: r.homepageUrl,
+          language: r.primaryLanguage?.name ?? null,
+          stargazers_count: r.stargazerCount,
+          fork: r.isFork,
+          private: r.isPrivate,
+          default_branch: r.defaultBranchRef?.name ?? 'main',
+          updated_at: r.updatedAt,
+        })
+      }
+    }
+  }
+  return [...repoMap.values()]
+}
+
+/**
+ * All repos accessible to the user: REST affiliations + GraphQL contribution history.
+ */
+export async function fetchAllAccessibleRepos(token: string, username: string): Promise<GithubRepo[]> {
+  const [restRepos, contribRepos] = await Promise.all([
+    fetchUserRepos(token),
+    fetchContributedRepos(token, username).catch(() => [] as GithubRepo[]),
+  ])
+
+  const map = new Map<string, GithubRepo>()
+  for (const r of [...restRepos, ...contribRepos]) {
+    if (!map.has(r.full_name)) map.set(r.full_name, r)
+  }
+  return [...map.values()].sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  )
 }
 
 /**

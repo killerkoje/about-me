@@ -52,6 +52,7 @@ export default function RepoAnalyzer() {
   const [analysis, setAnalysis] = useState<RepoAIAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
   const [collectedFiles, setCollectedFiles] = useState<CollectedRepoFiles | null>(null)
+  const [search, setSearch] = useState('')
 
   async function handleStart() {
     setStep('loading-repos')
@@ -185,22 +186,39 @@ export default function RepoAnalyzer() {
 
   // ── selecting ─────────────────────────────────────────────────
   if (step === 'selecting') {
+    const filtered = repos.filter(r =>
+      r.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      (r.description ?? '').toLowerCase().includes(search.toLowerCase())
+    )
     return (
       <div className="max-w-2xl">
-        <div className="mb-4">
+        <div className="mb-3">
           <h2 className="font-semibold text-gray-900">레포 선택</h2>
           <p className="text-sm text-gray-500 mt-0.5">{repos.length}개 레포 · 분석할 레포를 선택하세요</p>
         </div>
         {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+        {/* 검색 */}
+        <div className="relative mb-3">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="레포 검색..."
+            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          />
+        </div>
         <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto pr-1">
-          {repos.map(repo => (
+          {filtered.map(repo => (
             <button
               key={repo.id}
               onClick={() => handleSelectRepo(repo.full_name)}
               className="text-left flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50 transition-colors group"
             >
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm text-gray-900">{repo.name}</div>
+                <div className="font-medium text-sm text-gray-900">{repo.full_name}</div>
                 {repo.description && (
                   <p className="text-xs text-gray-500 truncate">{repo.description}</p>
                 )}
@@ -213,6 +231,9 @@ export default function RepoAnalyzer() {
               <span className="text-[10px] text-gray-400 flex-shrink-0">★ {repo.stargazers_count}</span>
             </button>
           ))}
+          {filtered.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-8">검색 결과가 없습니다.</p>
+          )}
         </div>
       </div>
     )
