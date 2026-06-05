@@ -11,21 +11,34 @@ export default function AddCareerButton() {
   const [endDate, setEndDate] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+
+  function handleClose() {
+    setOpen(false)
+    setCompany('')
+    setRole('')
+    setStartDate('')
+    setEndDate('')
+    setDescription('')
+    setError(null)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setPending(true)
     try {
       await createCareer({ company, role, start_date: startDate || null, end_date: endDate || null, description: description || null })
-      setOpen(false)
-      setCompany(''); setRole(''); setStartDate(''); setEndDate(''); setDescription('')
+      handleClose()
     } catch {
       setError('저장에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setPending(false)
     }
   }
 
   if (open) return (
-    <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50" onClick={() => setOpen(false)}>
+    <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50" onClick={handleClose}>
       <form className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col gap-3" onSubmit={handleSubmit} onClick={e => e.stopPropagation()}>
         <h2 className="font-semibold text-gray-900 mb-1">경력 추가</h2>
         <input required value={company} onChange={e => setCompany(e.target.value)} placeholder="회사명 *" className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
@@ -37,8 +50,8 @@ export default function AddCareerButton() {
         <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="담당 업무" rows={2} className="border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" />
         {error && <p className="text-xs text-red-500 text-center">{error}</p>}
         <div className="flex gap-2 justify-end">
-          <button type="button" onClick={() => setOpen(false)} className="text-sm text-gray-500 px-3 py-1.5">취소</button>
-          <button type="submit" className="text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg">저장</button>
+          <button type="button" onClick={handleClose} className="text-sm text-gray-500 px-3 py-1.5">취소</button>
+          <button type="submit" disabled={pending} className="text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-50">저장</button>
         </div>
       </form>
     </div>

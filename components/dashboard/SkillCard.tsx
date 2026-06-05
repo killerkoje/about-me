@@ -12,14 +12,31 @@ export default function SkillCard({ skill }: { skill: Skill }) {
   const [level, setLevel] = useState(skill.level)
   const [category, setCategory] = useState(skill.category)
   const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
 
   async function handleSave() {
     setError(null)
+    setPending(true)
     try {
       await updateSkill(skill.id, { name, level, category })
       setEditing(false)
     } catch {
       setError('저장에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm('스킬을 삭제하시겠습니까?')) return
+    setError(null)
+    setPending(true)
+    try {
+      await deleteSkill(skill.id)
+    } catch {
+      setError('삭제에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setPending(false)
     }
   }
 
@@ -39,7 +56,7 @@ export default function SkillCard({ skill }: { skill: Skill }) {
         {error && <p className="text-xs text-red-500 text-center">{error}</p>}
         <div className="flex gap-2 justify-end">
           <button onClick={() => setEditing(false)} className="text-sm text-gray-500 px-3 py-1.5">취소</button>
-          <button onClick={handleSave} className="text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-lg">저장</button>
+          <button onClick={handleSave} disabled={pending} className="text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-50">저장</button>
         </div>
       </div>
     )
@@ -54,12 +71,13 @@ export default function SkillCard({ skill }: { skill: Skill }) {
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => setEditing(true)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"><Pencil size={13} /></button>
-          <button onClick={() => { if (confirm('스킬을 삭제하시겠습니까?')) deleteSkill(skill.id) }} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
+          <button onClick={handleDelete} disabled={pending} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 disabled:opacity-50"><Trash2 size={13} /></button>
         </div>
       </div>
       <div className="h-1.5 bg-gray-100 rounded-full">
         <div className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all" style={{ width: `${skill.level}%` }} />
       </div>
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   )
 }

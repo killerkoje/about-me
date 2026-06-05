@@ -9,22 +9,32 @@ export default function AddSkillButton() {
   const [level, setLevel] = useState(50)
   const [category, setCategory] = useState<'language' | 'framework' | 'tool'>('language')
   const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+
+  function handleClose() {
+    setOpen(false)
+    setName('')
+    setLevel(50)
+    setCategory('language')
+    setError(null)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setPending(true)
     try {
       await createSkill({ name, level, category })
-      setOpen(false)
-      setName('')
-      setLevel(50)
+      handleClose()
     } catch {
       setError('저장에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setPending(false)
     }
   }
 
   if (open) return (
-    <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50" onClick={() => setOpen(false)}>
+    <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50" onClick={handleClose}>
       <form className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl" onSubmit={handleSubmit} onClick={e => e.stopPropagation()}>
         <h2 className="font-semibold text-gray-900 mb-4">스킬 추가</h2>
         <div className="flex flex-col gap-3">
@@ -40,8 +50,8 @@ export default function AddSkillButton() {
           </div>
           {error && <p className="text-xs text-red-500 text-center">{error}</p>}
           <div className="flex gap-2 justify-end">
-            <button type="button" onClick={() => setOpen(false)} className="text-sm text-gray-500 px-3 py-1.5">취소</button>
-            <button type="submit" className="text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg">저장</button>
+            <button type="button" onClick={handleClose} className="text-sm text-gray-500 px-3 py-1.5">취소</button>
+            <button type="submit" disabled={pending} className="text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-50">저장</button>
           </div>
         </div>
       </form>
