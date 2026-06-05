@@ -25,19 +25,22 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // /dashboard/* 보호
-  if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  const { pathname } = request.nextUrl
+
+  // / 또는 /login → 로그인 상태면 대시보드, 아니면 /login으로
+  if (pathname === '/' || pathname === '/login') {
+    if (user) return NextResponse.redirect(new URL('/dashboard', request.url))
+    if (pathname === '/') return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // 로그인 상태에서 /login 접근 시 대시보드로
-  if (request.nextUrl.pathname === '/login' && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  // /dashboard/* 보호
+  if (pathname.startsWith('/dashboard') && !user) {
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   return response
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: ['/', '/dashboard/:path*', '/login'],
 }
