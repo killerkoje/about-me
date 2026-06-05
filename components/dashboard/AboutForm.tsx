@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { User } from '@/lib/types'
 import { updateProfile } from '@/app/(dashboard)/dashboard/about/actions'
 
@@ -11,6 +11,13 @@ export default function AboutForm({ profile }: { profile: User }) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+    }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -19,7 +26,7 @@ export default function AboutForm({ profile }: { profile: User }) {
     try {
       await updateProfile({ name, bio, location, is_open_to_work: isOpenToWork })
       setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      savedTimerRef.current = setTimeout(() => setSaved(false), 2000)
     } catch {
       setError('저장에 실패했습니다. 다시 시도해주세요.')
     } finally {
@@ -30,8 +37,9 @@ export default function AboutForm({ profile }: { profile: User }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">이름</label>
+        <label htmlFor="about-name" className="text-sm font-medium text-gray-700 mb-1 block">이름</label>
         <input
+          id="about-name"
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="홍길동"
@@ -39,8 +47,9 @@ export default function AboutForm({ profile }: { profile: User }) {
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">한 줄 소개</label>
+        <label htmlFor="about-bio" className="text-sm font-medium text-gray-700 mb-1 block">한 줄 소개</label>
         <textarea
+          id="about-bio"
           value={bio}
           onChange={e => setBio(e.target.value)}
           placeholder="Full-Stack Developer · 사용자 경험을 중시하는 개발자입니다."
@@ -49,8 +58,9 @@ export default function AboutForm({ profile }: { profile: User }) {
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">위치</label>
+        <label htmlFor="about-location" className="text-sm font-medium text-gray-700 mb-1 block">위치</label>
         <input
+          id="about-location"
           value={location}
           onChange={e => setLocation(e.target.value)}
           placeholder="Seoul, Korea"
