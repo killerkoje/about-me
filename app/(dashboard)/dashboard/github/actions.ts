@@ -7,6 +7,7 @@ import {
   fetchRepo,
   fetchRepoLanguages,
   fetchRepoCommits,
+  fetchRepoCommitsFull,
   fetchRepoReadme,
   fetchUserStats,
   fetchRepoCommitCount,
@@ -96,6 +97,45 @@ export async function analyzeRepo(repoFullName: string): Promise<RepoAnalysis> {
   }
 }
 
+export type CommitItem = {
+  sha: string
+  message: string
+  author: string
+  date: string
+}
+
+export type CommitPageResult = {
+  commits: CommitItem[]
+  page: number
+  perPage: number
+  hasMore: boolean
+}
+
+export async function getRepoCommitsPaged(
+  repoFullName: string,
+  page: number = 1,
+  perPage: number = 30
+): Promise<CommitPageResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+  const token = await getGithubToken(supabase, user.id)
+  const githubUsername = (user.user_metadata?.user_name ?? '') as string
+
+  const batch = await fetchRepoCommitsFull(token, repoFullName, githubUsername, page, perPage)
+  return {
+    commits: batch.map(c => ({
+      sha: c.sha.slice(0, 7),
+      message: c.commit.message.split('\n')[0].trim(),
+      author: c.commit.author.name,
+      date: c.commit.author.date,
+    })),
+    page,
+    perPage,
+    hasMore: batch.length === perPage,
+  }
+}
+
 export async function getMyRepos(): Promise<GithubRepo[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -104,6 +144,55 @@ export async function getMyRepos(): Promise<GithubRepo[]> {
   return fetchUserRepos(token)
 }
 
+// ── 1단계: GitHub 데이터 수집 ─────────────────────────────────
+
+export type RepoRawData = {
+  repoName: string
+  fullName: string
+  description: string | null
+  htmlUrl: string
+  homepage: string | null
+  languages: Record<string, number>
+  commits: string[]
+  readme: string | null
+}
+
+export async function fetchReposData(repoFullNames: string[]): Promise<RepoRawData[]> {
+  if (repoFullNames.length === 0) return []
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const token = await getGithubToken(supabase, user.id)
+  const githubUsername = (user.user_metadata?.user_name ?? '') as string
+
+  const allRepos = await fetchUserRepos(token)
+  const selected = allRepos.filter(r => repoFullNames.includes(r.full_name))
+
+  return Promise.all(
+    selected.map(async repo => {
+      const [languages, commits, readme] = await Promise.all([
+        fetchRepoLanguages(token, repo.full_name),
+        fetchRepoCommits(token, repo.full_name, githubUsername),
+        fetchRepoReadme(token, repo.full_name),
+      ])
+      return {
+        repoName: repo.name,
+        fullName: repo.full_name,
+        description: repo.description,
+        htmlUrl: repo.html_url,
+        homepage: repo.homepage,
+        languages,
+        commits,
+        readme,
+      }
+    })
+  )
+}
+
+// ── 2단계: AI 분석 + 저장 ─────────────────────────────────────
+
 export type RepoImportResult = {
   repoName: string
   description: string
@@ -111,8 +200,8 @@ export type RepoImportResult = {
   skipped: boolean
 }
 
-export async function importSelectedRepos(repoFullNames: string[]): Promise<RepoImportResult[]> {
-  if (repoFullNames.length === 0) return []
+export async function analyzeAndSaveRepos(rawData: RepoRawData[]): Promise<RepoImportResult[]> {
+  if (rawData.length === 0) return []
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -135,50 +224,37 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<Repo
   const token = decrypt(profile.github_token)
   const githubUsername = (user.user_metadata?.user_name ?? '') as string
 
-  const allRepos = await fetchUserRepos(token)
-  const selected = allRepos.filter(r => repoFullNames.includes(r.full_name))
-
   const languageTotals: Record<string, number> = {}
   const results: RepoImportResult[] = []
 
-  const repoDetails = await Promise.all(
-    selected.map(async repo => {
-      const [languages, commits, readme] = await Promise.all([
-        fetchRepoLanguages(token, repo.full_name),
-        fetchRepoCommits(token, repo.full_name, githubUsername),
-        fetchRepoReadme(token, repo.full_name),
-      ])
-      Object.entries(languages).forEach(([lang, bytes]) => {
-        languageTotals[lang] = (languageTotals[lang] ?? 0) + bytes
-      })
-      return { repo, languages, commits, readme }
+  for (const repo of rawData) {
+    Object.entries(repo.languages).forEach(([lang, bytes]) => {
+      languageTotals[lang] = (languageTotals[lang] ?? 0) + (bytes as number)
     })
-  )
 
-  for (const { repo, languages, commits, readme } of repoDetails) {
     const { data: existing } = await supabase
       .from('projects')
       .select('id')
       .eq('user_id', user.id)
-      .eq('github_url', repo.html_url)
+      .eq('github_url', repo.htmlUrl)
       .maybeSingle()
 
     if (existing) {
-      results.push({ repoName: repo.name, description: '', tech_stack: [], skipped: true })
+      results.push({ repoName: repo.repoName, description: '', tech_stack: [], skipped: true })
       continue
     }
 
-    const tech_stack = Object.keys(languages).slice(0, 6)
+    const tech_stack = Object.keys(repo.languages).slice(0, 6)
     let description: string = repo.description ?? ''
 
     try {
       const summary = await summarizeProjectFromCommits(
         anthropicKey,
-        repo.name,
-        commits,
+        repo.repoName,
+        repo.commits,
         tech_stack,
         repo.description,
-        readme
+        repo.readme
       )
       if (summary.description) {
         const highlights = summary.tech_highlights.length > 0
@@ -192,51 +268,40 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<Repo
 
     await supabase.from('projects').insert({
       user_id: user.id,
-      title: repo.name,
+      title: repo.repoName,
       description: description || null,
-      tech_stack,  // 언어 이름 그대로 유지
-      github_url: repo.html_url,
+      tech_stack,
+      github_url: repo.htmlUrl,
       demo_url: repo.homepage || null,
       status: 'live' as const,
       order: 0,
     })
 
-    results.push({ repoName: repo.name, description, tech_stack, skipped: false })
+    results.push({ repoName: repo.repoName, description, tech_stack, skipped: false })
   }
 
   // 스킬 집계
-  const sortedLangs = Object.entries(languageTotals)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 15)
+  const sortedLangs = Object.entries(languageTotals).sort(([, a], [, b]) => b - a).slice(0, 15)
   const totalBytes = sortedLangs.reduce((s, [, b]) => s + b, 0)
 
   for (const [lang, bytes] of sortedLangs) {
     const { data: existing } = await supabase
-      .from('skills')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('name', lang)
-      .maybeSingle()
+      .from('skills').select('id').eq('user_id', user.id).eq('name', lang).maybeSingle()
     if (existing) continue
     const ratio = totalBytes > 0 ? bytes / totalBytes : 0
     const level = Math.max(20, Math.min(95, Math.round(ratio * 300)))
-    await supabase.from('skills').insert({
-      user_id: user.id,
-      name: lang,
-      category: 'language' as const,
-      level,
-      order: 0,
-    })
+    await supabase.from('skills').insert({ user_id: user.id, name: lang, category: 'language' as const, level, order: 0 })
   }
 
-  // GitHub 통계 업데이트
+  // GitHub 통계
+  const allRepos = await fetchUserRepos(token)
+  const selectedRepos = allRepos.filter(r => rawData.some(d => d.fullName === r.full_name))
   const [userStats, commitCounts] = await Promise.all([
     fetchUserStats(token, allRepos),
-    Promise.all(selected.map(r => fetchRepoCommitCount(token, r.full_name, githubUsername))),
+    Promise.all(selectedRepos.map(r => fetchRepoCommitCount(token, r.full_name, githubUsername))),
   ])
   const total_commits = commitCounts.reduce((s, c) => s + c, 0)
-  const top_languages = Object.entries(languageTotals)
-    .sort(([, a], [, b]) => b - a).slice(0, 5).map(([name]) => name)
+  const top_languages = sortedLangs.slice(0, 5).map(([name]) => name)
 
   await supabase.from('users').update({
     github_stats: { total_commits, stars: userStats.total_stars, followers: userStats.followers, top_languages },

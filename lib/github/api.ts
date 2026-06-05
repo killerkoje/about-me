@@ -91,6 +91,26 @@ export async function fetchRepoLanguages(
 }
 
 /**
+ * Full commit objects for a repo — single page, author-filtered.
+ */
+export async function fetchRepoCommitsFull(
+  token: string,
+  fullName: string,
+  author: string,
+  page: number = 1,
+  perPage: number = 30
+): Promise<GithubCommit[]> {
+  try {
+    return await ghFetch<GithubCommit[]>(
+      token,
+      `/repos/${fullName}/commits?author=${author}&per_page=${perPage}&page=${page}`
+    )
+  } catch {
+    return []
+  }
+}
+
+/**
  * Commit subject lines for a repo (author-filtered, max 500).
  */
 export async function fetchRepoCommits(

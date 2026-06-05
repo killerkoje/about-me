@@ -1,11 +1,11 @@
 'use client'
 import { useState } from 'react'
 import { GitBranch, Loader2, Check, ChevronRight, RefreshCw, Key } from 'lucide-react'
-import { getMyRepos, importSelectedRepos } from '@/app/(dashboard)/dashboard/github/actions'
+import { getMyRepos, fetchReposData, analyzeAndSaveRepos } from '@/app/(dashboard)/dashboard/github/actions'
 import type { RepoImportResult } from '@/app/(dashboard)/dashboard/github/actions'
 import type { GithubRepo } from '@/lib/github/api'
 
-type Step = 'idle' | 'loading' | 'selecting' | 'importing' | 'done' | 'error'
+type Step = 'idle' | 'loading' | 'selecting' | 'fetching' | 'analyzing' | 'done' | 'error'
 
 type Props = {
   hasApiKey: boolean
@@ -33,10 +33,12 @@ export default function GithubImporter({ hasApiKey }: Props) {
 
   async function handleImport() {
     if (selected.size === 0) return
-    setStep('importing')
+    setStep('fetching')
     setErrorMsg(null)
     try {
-      const data = await importSelectedRepos([...selected])
+      const rawData = await fetchReposData([...selected])
+      setStep('analyzing')
+      const data = await analyzeAndSaveRepos(rawData)
       setResults(data)
       setStep('done')
     } catch (e) {
@@ -117,11 +119,21 @@ export default function GithubImporter({ hasApiKey }: Props) {
     )
   }
 
-  if (step === 'importing') {
+  if (step === 'fetching') {
+    return (
+      <div className="flex flex-col items-center py-16 gap-3">
+        <Loader2 size={24} className="animate-spin text-blue-500" />
+        <p className="text-sm text-gray-700 font-medium">1단계: GitHub 데이터 수집 중...</p>
+        <p className="text-xs text-gray-400">{selected.size}개 레포 · 커밋 내역, README, 언어 정보 수집 중</p>
+      </div>
+    )
+  }
+
+  if (step === 'analyzing') {
     return (
       <div className="flex flex-col items-center py-16 gap-3">
         <Loader2 size={24} className="animate-spin text-indigo-500" />
-        <p className="text-sm text-gray-700 font-medium">AI가 커밋을 분석하고 있습니다...</p>
+        <p className="text-sm text-gray-700 font-medium">2단계: AI 분석 중...</p>
         <p className="text-xs text-gray-400">{selected.size}개 레포 처리 중 · 레포당 10~20초 소요</p>
       </div>
     )

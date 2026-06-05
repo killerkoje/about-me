@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import GithubImporter from '@/components/dashboard/GithubImporter'
+import CommitViewer from '@/components/dashboard/CommitViewer'
 
 export default async function GithubPage() {
   const supabase = await createClient()
@@ -16,12 +17,19 @@ export default async function GithubPage() {
   const hasApiKey = !!profile?.anthropic_api_key
 
   return (
-    <div className="p-6 max-w-3xl">
-      <h1 className="text-xl font-bold text-gray-900 mb-1">GitHub 분석</h1>
-      <p className="text-gray-500 text-sm mb-6">
-        레포의 커밋 내역을 AI가 분석해서 포트폴리오를 자동으로 작성합니다.
-      </p>
-      <GithubImporter hasApiKey={hasApiKey} />
+    <div className="p-6 max-w-3xl flex flex-col gap-8">
+      <div>
+        <h1 className="text-xl font-bold text-gray-900 mb-1">GitHub 분석</h1>
+        <p className="text-gray-500 text-sm mb-6">
+          레포의 커밋 내역을 AI가 분석해서 포트폴리오를 자동으로 작성합니다.
+        </p>
+        <GithubImporter hasApiKey={hasApiKey} />
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold text-gray-900 mb-3">커밋 내역 조회</h2>
+        <CommitViewer />
+      </div>
     </div>
   )
 }
