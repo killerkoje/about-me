@@ -9,6 +9,7 @@ export default function LoginPage() {
       provider: 'github',
       options: {
         redirectTo: `${window.location.origin}/api/auth/callback`,
+        scopes: 'read:user user:email repo',
       },
     })
   }
