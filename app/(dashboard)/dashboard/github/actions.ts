@@ -24,6 +24,62 @@ async function getGithubToken(supabase: Awaited<ReturnType<typeof createClient>>
   return decrypt(data.github_token)
 }
 
+export type RepoAnalysis = {
+  title: string
+  description: string
+  tech_stack: string[]
+  github_url: string
+  demo_url: string
+}
+
+export async function analyzeRepo(repoFullName: string): Promise<RepoAnalysis> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('anthropic_api_key, github_token')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.github_token) {
+    throw new Error('GitHub 토큰을 찾을 수 없습니다. 로그아웃 후 다시 로그인해주세요.')
+  }
+  if (!profile?.anthropic_api_key) {
+    throw new Error('Anthropic API 키가 없습니다. 설정에서 먼저 등록해주세요.')
+  }
+
+  const token = decrypt(profile.github_token)
+  const anthropicKey = decrypt(profile.anthropic_api_key)
+  const githubUsername = (user.user_metadata?.user_name ?? '') as string
+
+  const [languages, commits, allRepos] = await Promise.all([
+    fetchRepoLanguages(token, repoFullName),
+    fetchRepoCommits(token, repoFullName, githubUsername),
+    fetchUserRepos(token),
+  ])
+
+  const repo = allRepos.find(r => r.full_name === repoFullName)
+  const tech_stack = Object.keys(languages).slice(0, 8)
+
+  const summary = await summarizeProjectFromCommits(
+    anthropicKey,
+    repoFullName.split('/')[1],
+    commits,
+    tech_stack,
+    repo?.description ?? null
+  )
+
+  return {
+    title: repoFullName.split('/')[1],
+    description: summary.description || repo?.description || '',
+    tech_stack: summary.tech_highlights.length > 0 ? summary.tech_highlights : tech_stack,
+    github_url: repo?.html_url ?? `https://github.com/${repoFullName}`,
+    demo_url: repo?.homepage ?? '',
+  }
+}
+
 export async function getMyRepos(): Promise<GithubRepo[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
