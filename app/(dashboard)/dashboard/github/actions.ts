@@ -254,6 +254,59 @@ export async function collectRepoFiles(repoFullName: string): Promise<CollectedR
   }
 }
 
+// ── 기본 정보로 즉시 등록 ─────────────────────────────────────
+
+export type BasicImportResult = {
+  added: number
+  skipped: number
+}
+
+export async function importReposBasic(repoFullNames: string[]): Promise<BasicImportResult> {
+  if (repoFullNames.length === 0) return { added: 0, skipped: 0 }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const token = await getGithubToken(supabase, user.id)
+
+  let added = 0, skipped = 0
+
+  await Promise.all(
+    repoFullNames.map(async fullName => {
+      const [repo, languages] = await Promise.all([
+        fetchRepo(token, fullName),
+        fetchRepoLanguages(token, fullName),
+      ])
+
+      const { data: existing } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('github_url', repo.html_url)
+        .maybeSingle()
+
+      if (existing) { skipped++; return }
+
+      const tech_stack = Object.keys(languages).slice(0, 6)
+      await supabase.from('projects').insert({
+        user_id: user.id,
+        title: repo.name,
+        description: repo.description || null,
+        tech_stack,
+        github_url: repo.html_url,
+        demo_url: repo.homepage || null,
+        status: 'live' as const,
+        order: 0,
+      })
+      added++
+    })
+  )
+
+  revalidatePath('/dashboard/projects')
+  return { added, skipped }
+}
+
 // ── AI 분석 + 프로젝트 저장 ────────────────────────────────────
 
 export type RepoAIAnalysis = {
