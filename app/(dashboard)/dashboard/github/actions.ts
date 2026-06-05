@@ -196,6 +196,7 @@ export type CollectedRepoFiles = {
   skippedCount: number
   estimatedTokens: number
   context: string
+  filePaths: string[]
 }
 
 export async function collectRepoFiles(repoFullName: string): Promise<CollectedRepoFiles> {
@@ -249,6 +250,7 @@ export async function collectRepoFiles(repoFullName: string): Promise<CollectedR
     skippedCount: skipped,
     estimatedTokens,
     context,
+    filePaths: fetched.map(f => f.path),
   }
 }
 

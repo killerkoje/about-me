@@ -11,8 +11,9 @@ import {
 import type { SingleRepoData, RepoAIAnalysis, CollectedRepoFiles } from '@/app/(dashboard)/dashboard/github/actions'
 import type { GithubRepo } from '@/lib/github/api'
 import RepoChatWindow from './RepoChatWindow'
+import FileTreeView from './FileTreeView'
 
-type Step = 'idle' | 'loading-repos' | 'selecting' | 'loading-data' | 'ready' | 'analyzing' | 'analyzed' | 'saved' | 'collecting-files' | 'chat'
+type Step = 'idle' | 'loading-repos' | 'selecting' | 'loading-data' | 'ready' | 'analyzing' | 'analyzed' | 'saved' | 'collecting-files' | 'files-collected' | 'chat'
 
 const LANG_COLORS: Record<string, string> = {
   TypeScript: 'bg-blue-100 text-blue-700',
@@ -129,7 +130,7 @@ export default function RepoAnalyzer() {
     try {
       const result = await collectRepoFiles(selectedRepo)
       setCollectedFiles(result)
-      setStep('chat')
+      setStep('files-collected')
     } catch (e) {
       setError(e instanceof Error ? e.message : '파일 수집에 실패했습니다.')
       setStep('ready')
@@ -520,6 +521,37 @@ export default function RepoAnalyzer() {
     )
   }
 
+  // ── files collected (tree view) ───────────────────────────────
+  if (step === 'files-collected' && collectedFiles && repoData) {
+    const tokenCost = ((collectedFiles.estimatedTokens / 1_000_000) * 0.8).toFixed(4)
+    return (
+      <div className="max-w-2xl flex flex-col gap-5">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setStep('ready')} className="text-gray-400 hover:text-gray-600">
+            <ChevronLeft size={18} />
+          </button>
+          <div>
+            <h2 className="font-bold text-gray-900 text-base">{repoData.repoName} — 파일 구조</h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {collectedFiles.fileCount}개 파일 수집됨 · 약 {collectedFiles.estimatedTokens.toLocaleString()} 토큰 · 메시지당 ~${tokenCost}
+            </p>
+          </div>
+        </div>
+
+        <FileTreeView filePaths={collectedFiles.filePaths} repoName={repoData.repoName} />
+
+        <div className="flex justify-end">
+          <button
+            onClick={() => setStep('chat')}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            <Sparkles size={15} /> AI 채팅 시작
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // ── chat ──────────────────────────────────────────────────────
   if (step === 'chat' && collectedFiles && repoData) {
     return (
@@ -529,7 +561,7 @@ export default function RepoAnalyzer() {
           repoContext={collectedFiles.context}
           fileCount={collectedFiles.fileCount}
           estimatedTokens={collectedFiles.estimatedTokens}
-          onBack={() => setStep('ready')}
+          onBack={() => setStep('files-collected')}
         />
       </div>
     )
