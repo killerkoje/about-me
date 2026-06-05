@@ -1,0 +1,4 @@
+{"type":"server-started","port":64986,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:64986","screen_dir":"/Users/leeheewon/Documents/about-me/.superpowers/brainstorm/79774-1780627680/content","state_dir":"/Users/leeheewon/Documents/about-me/.superpowers/brainstorm/79774-1780627680/state"}
+{"type":"screen-added","file":"/Users/leeheewon/Documents/about-me/.superpowers/brainstorm/79774-1780627680/content/dashboard-mockup.html"}
+{"type":"screen-added","file":"/Users/leeheewon/Documents/about-me/.superpowers/brainstorm/79774-1780627680/content/dashboard-light.html"}
+{"type":"server-stopped","reason":"idle timeout"}
