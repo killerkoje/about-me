@@ -2,16 +2,17 @@
 import { useState } from 'react'
 import {
   GitBranch, Loader2, ChevronLeft, ChevronRight,
-  Star, ExternalLink, FileText, Code2, GitCommit, Sparkles, Check,
+  Star, ExternalLink, FileText, Code2, GitCommit, Sparkles, Check, FolderOpen,
 } from 'lucide-react'
 import {
   getMyRepos, fetchSingleRepoData, getRepoCommitsPaged,
-  analyzeRepoWithAI, saveProjectFromRepo,
+  analyzeRepoWithAI, saveProjectFromRepo, collectRepoFiles,
 } from '@/app/(dashboard)/dashboard/github/actions'
-import type { SingleRepoData, RepoAIAnalysis } from '@/app/(dashboard)/dashboard/github/actions'
+import type { SingleRepoData, RepoAIAnalysis, CollectedRepoFiles } from '@/app/(dashboard)/dashboard/github/actions'
 import type { GithubRepo } from '@/lib/github/api'
+import RepoChatWindow from './RepoChatWindow'
 
-type Step = 'idle' | 'loading-repos' | 'selecting' | 'loading-data' | 'ready' | 'analyzing' | 'analyzed' | 'saved'
+type Step = 'idle' | 'loading-repos' | 'selecting' | 'loading-data' | 'ready' | 'analyzing' | 'analyzed' | 'saved' | 'collecting-files' | 'chat'
 
 const LANG_COLORS: Record<string, string> = {
   TypeScript: 'bg-blue-100 text-blue-700',
@@ -50,6 +51,7 @@ export default function RepoAnalyzer() {
   const [loadingCommits, setLoadingCommits] = useState(false)
   const [analysis, setAnalysis] = useState<RepoAIAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
+  const [collectedFiles, setCollectedFiles] = useState<CollectedRepoFiles | null>(null)
 
   async function handleStart() {
     setStep('loading-repos')
@@ -115,6 +117,20 @@ export default function RepoAnalyzer() {
       setStep('analyzed')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 분석에 실패했습니다.')
+      setStep('ready')
+    }
+  }
+
+  async function handleCollectFiles() {
+    if (!selectedRepo) return
+    setStep('collecting-files')
+    setError(null)
+    try {
+      const result = await collectRepoFiles(selectedRepo)
+      setCollectedFiles(result)
+      setStep('chat')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '파일 수집에 실패했습니다.')
       setStep('ready')
     }
   }
@@ -372,17 +388,36 @@ export default function RepoAnalyzer() {
         </div>
 
         {/* AI 분석 CTA */}
-        <div className="border-2 border-dashed border-indigo-200 rounded-2xl p-5 flex items-center justify-between bg-indigo-50/40">
-          <div>
-            <p className="font-semibold text-gray-900 text-sm">AI 분석 준비 완료</p>
-            <p className="text-xs text-gray-500 mt-0.5">커밋 내역과 README를 기반으로 포트폴리오 설명을 생성합니다</p>
+        <div className="border border-gray-100 rounded-2xl p-5 bg-white flex flex-col gap-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">AI 분석</p>
+          <div className="flex flex-col gap-2">
+            {/* 빠른 분석 */}
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-indigo-50/60 border border-indigo-100">
+              <div>
+                <p className="text-sm font-medium text-gray-900">빠른 분석</p>
+                <p className="text-xs text-gray-500 mt-0.5">커밋 내역 + README 기반 · 자동 요약 생성</p>
+              </div>
+              <button
+                onClick={handleAnalyze}
+                className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors flex-shrink-0"
+              >
+                <Sparkles size={13} /> 분석 시작
+              </button>
+            </div>
+            {/* 전체 파일 채팅 */}
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <div>
+                <p className="text-sm font-medium text-gray-900">전체 파일 채팅</p>
+                <p className="text-xs text-gray-500 mt-0.5">전체 코드 수집 후 직접 채팅 · 더 정확한 분석</p>
+              </div>
+              <button
+                onClick={handleCollectFiles}
+                className="flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-gray-700 transition-colors flex-shrink-0"
+              >
+                <FolderOpen size={13} /> 파일 수집
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleAnalyze}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
-          >
-            <Sparkles size={15} /> AI 분석 시작
-          </button>
         </div>
 
       </div>
@@ -460,6 +495,40 @@ export default function RepoAnalyzer() {
             프로젝트로 등록
           </button>
         </div>
+      </div>
+    )
+  }
+
+  // ── collecting files ──────────────────────────────────────────
+  if (step === 'collecting-files') {
+    return (
+      <div className="flex flex-col items-center py-20 gap-5">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
+            <FolderOpen size={28} className="text-gray-600 animate-pulse" />
+          </div>
+          <Loader2 size={18} className="animate-spin text-gray-500 absolute -bottom-1 -right-1" />
+        </div>
+        <div className="text-center">
+          <p className="font-semibold text-gray-900">파일 수집 중...</p>
+          <p className="text-sm text-gray-500 mt-1">전체 파일 트리를 읽고 코드를 불러오는 중입니다</p>
+          <p className="text-xs text-gray-400 mt-1">파일 수에 따라 30초~2분 소요될 수 있습니다</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── chat ──────────────────────────────────────────────────────
+  if (step === 'chat' && collectedFiles && repoData) {
+    return (
+      <div className="max-w-2xl">
+        <RepoChatWindow
+          repoName={repoData.repoName}
+          repoContext={collectedFiles.context}
+          fileCount={collectedFiles.fileCount}
+          estimatedTokens={collectedFiles.estimatedTokens}
+          onBack={() => setStep('ready')}
+        />
       </div>
     )
   }

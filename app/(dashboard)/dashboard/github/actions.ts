@@ -9,6 +9,8 @@ import {
   fetchRepoCommits,
   fetchRepoCommitsFull,
   fetchRepoReadme,
+  fetchFileTree,
+  fetchFileContent,
   fetchUserStats,
   fetchRepoCommitCount,
   type GithubRepo,
@@ -142,6 +144,110 @@ export async function getMyRepos(): Promise<GithubRepo[]> {
   if (!user) throw new Error('Unauthorized')
   const token = await getGithubToken(supabase, user.id)
   return fetchUserRepos(token)
+}
+
+// ── 전체 파일 수집 ────────────────────────────────────────────
+
+const SKIP_PATTERNS = [
+  /^node_modules\//,
+  /^\.git\//,
+  /^(dist|build|out|\.next|\.nuxt|coverage|__pycache__|\.venv|venv|vendor)\//,
+  /package-lock\.json$/,
+  /yarn\.lock$/,
+  /pnpm-lock\.yaml$/,
+  /\.lock$/,
+  /\.min\.(js|css)$/,
+  /\.(png|jpg|jpeg|gif|svg|ico|webp|avif|bmp|tiff)$/i,
+  /\.(woff2?|ttf|eot|otf)$/i,
+  /\.(mp4|mp3|wav|ogg|avi|mov|webm)$/i,
+  /\.(pdf|zip|tar\.gz|rar|7z|exe|dll|so|dylib)$/i,
+  /\.env($|\.local$|\.production$|\.development$)/,
+  /\.DS_Store$/,
+  /\.map$/,
+  /\.d\.ts$/,
+]
+
+const CODE_EXTENSIONS = new Set([
+  'ts','tsx','js','jsx','mjs','cjs',
+  'py','go','rs','java','kt','swift','dart',
+  'c','cpp','h','hpp','cs','rb','php',
+  'html','css','scss','sass','less',
+  'json','yaml','yml','toml','env.example',
+  'sql','prisma','graphql','gql',
+  'sh','bash','zsh','fish',
+  'md','mdx',
+  'dockerfile','Makefile',
+])
+
+function shouldInclude(path: string, size?: number): boolean {
+  if (SKIP_PATTERNS.some(p => p.test(path))) return false
+  if (size && size > 100_000) return false  // skip files > 100KB
+  const ext = path.split('.').pop()?.toLowerCase() ?? ''
+  const filename = path.split('/').pop()?.toLowerCase() ?? ''
+  // Always include common config files regardless of extension
+  if (['dockerfile','makefile','procfile'].includes(filename)) return true
+  return CODE_EXTENSIONS.has(ext)
+}
+
+export type CollectedRepoFiles = {
+  fileCount: number
+  skippedCount: number
+  estimatedTokens: number
+  context: string
+}
+
+export async function collectRepoFiles(repoFullName: string): Promise<CollectedRepoFiles> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const token = await getGithubToken(supabase, user.id)
+  const repo = await fetchRepo(token, repoFullName)
+  const allEntries = await fetchFileTree(token, repoFullName, repo.default_branch)
+
+  const eligible = allEntries.filter(e => shouldInclude(e.path, e.size))
+  const MAX_FILES = 200
+  const MAX_CHARS = 600_000
+  const toFetch = eligible.slice(0, MAX_FILES)
+
+  // Batch fetch in groups of 20 to avoid rate limits
+  const BATCH = 20
+  const fetched: Array<{ path: string; content: string }> = []
+  let totalChars = 0
+  let skipped = 0
+
+  for (let i = 0; i < toFetch.length; i += BATCH) {
+    const batch = toFetch.slice(i, i + BATCH)
+    const results = await Promise.all(
+      batch.map(async entry => {
+        const content = await fetchFileContent(token, repoFullName, entry.path)
+        return { path: entry.path, content }
+      })
+    )
+    for (const r of results) {
+      if (!r.content) { skipped++; continue }
+      if (totalChars + r.content.length > MAX_CHARS) { skipped++; continue }
+      fetched.push({ path: r.path, content: r.content })
+      totalChars += r.content.length
+    }
+    if (totalChars >= MAX_CHARS) break
+  }
+
+  skipped += (eligible.length - toFetch.length) // files beyond MAX_FILES
+
+  const sections = fetched.map(f =>
+    `=== ${f.path} ===\n${f.content}`
+  ).join('\n\n')
+
+  const context = `Repository: ${repoFullName}\nBranch: ${repo.default_branch}\nDescription: ${repo.description ?? '없음'}\n\n${sections}`
+  const estimatedTokens = Math.round(totalChars / 4)
+
+  return {
+    fileCount: fetched.length,
+    skippedCount: skipped,
+    estimatedTokens,
+    context,
+  }
 }
 
 // ── AI 분석 + 프로젝트 저장 ────────────────────────────────────

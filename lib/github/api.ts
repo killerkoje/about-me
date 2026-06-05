@@ -40,6 +40,53 @@ async function ghFetch<T>(token: string, path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export type FileTreeEntry = {
+  path: string
+  type: 'blob' | 'tree'
+  size?: number
+}
+
+/**
+ * Full recursive file tree for a repo.
+ */
+export async function fetchFileTree(
+  token: string,
+  fullName: string,
+  branch: string
+): Promise<FileTreeEntry[]> {
+  try {
+    const data = await ghFetch<{ tree: FileTreeEntry[]; truncated: boolean }>(
+      token,
+      `/repos/${fullName}/git/trees/${branch}?recursive=1`
+    )
+    return data.tree.filter(e => e.type === 'blob')
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Single file content decoded from base64. Returns null on error.
+ */
+export async function fetchFileContent(
+  token: string,
+  fullName: string,
+  path: string
+): Promise<string | null> {
+  try {
+    const data = await ghFetch<{ content: string; encoding: string; size: number }>(
+      token,
+      `/repos/${fullName}/contents/${path.split('/').map(encodeURIComponent).join('/')}`
+    )
+    if (data.encoding === 'base64') {
+      return Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf-8')
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 /**
  * README.md content (decoded from base64). Returns null if not found.
  */
