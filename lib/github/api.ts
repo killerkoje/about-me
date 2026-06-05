@@ -69,7 +69,7 @@ export async function fetchRepoLanguages(
 }
 
 /**
- * Commit subject lines for a repo (author-filtered, max 200).
+ * Commit subject lines for a repo (author-filtered, last 6 months, max 200).
  */
 export async function fetchRepoCommits(
   token: string,
@@ -80,11 +80,15 @@ export async function fetchRepoCommits(
   let page = 1
   const maxPages = 2
 
+  const since = new Date()
+  since.setMonth(since.getMonth() - 6)
+  const sinceParam = since.toISOString()
+
   while (page <= maxPages) {
     try {
       const batch = await ghFetch<GithubCommit[]>(
         token,
-        `/repos/${fullName}/commits?author=${author}&per_page=100&page=${page}`
+        `/repos/${fullName}/commits?author=${author}&per_page=100&page=${page}&since=${sinceParam}`
       )
       if (batch.length === 0) break
       batch.forEach(c => {
