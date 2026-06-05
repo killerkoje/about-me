@@ -65,7 +65,6 @@ export async function analyzeRepo(repoFullName: string): Promise<RepoAnalysis> {
   const repoName = repoFullName.split('/')[1]
 
   let description = repo.description ?? ''
-  let finalTechStack = tech_stack
 
   try {
     const summary = await summarizeProjectFromCommits(
@@ -75,8 +74,12 @@ export async function analyzeRepo(repoFullName: string): Promise<RepoAnalysis> {
       tech_stack,
       repo.description ?? null
     )
-    if (summary.description) description = summary.description
-    if (summary.tech_highlights.length > 0) finalTechStack = summary.tech_highlights
+    if (summary.description) {
+      const highlights = summary.tech_highlights.length > 0
+        ? `\n\n주요 구현: ${summary.tech_highlights.join(' · ')}`
+        : ''
+      description = summary.description + highlights
+    }
   } catch {
     // Claude 실패 시 기본값 사용
   }
@@ -84,7 +87,7 @@ export async function analyzeRepo(repoFullName: string): Promise<RepoAnalysis> {
   return {
     title: repoName,
     description,
-    tech_stack: finalTechStack,
+    tech_stack,  // 언어 이름 유지
     github_url: repo.html_url,
     demo_url: repo.homepage ?? '',
   }
@@ -163,7 +166,6 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<Repo
 
     const tech_stack = Object.keys(languages).slice(0, 6)
     let description: string = repo.description ?? ''
-    let finalTechStack = tech_stack
 
     try {
       const summary = await summarizeProjectFromCommits(
@@ -173,8 +175,13 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<Repo
         tech_stack,
         repo.description
       )
-      if (summary.description) description = summary.description
-      if (summary.tech_highlights.length > 0) finalTechStack = summary.tech_highlights
+      if (summary.description) {
+        // 서술 + 구현 포인트를 description에 합침
+        const highlights = summary.tech_highlights.length > 0
+          ? `\n\n주요 구현: ${summary.tech_highlights.join(' · ')}`
+          : ''
+        description = summary.description + highlights
+      }
     } catch {
       // Claude 실패 시 기본값
     }
@@ -183,14 +190,14 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<Repo
       user_id: user.id,
       title: repo.name,
       description: description || null,
-      tech_stack: finalTechStack,
+      tech_stack,  // 언어 이름 그대로 유지
       github_url: repo.html_url,
       demo_url: repo.homepage || null,
       status: 'live' as const,
       order: 0,
     })
 
-    results.push({ repoName: repo.name, description, tech_stack: finalTechStack, skipped: false })
+    results.push({ repoName: repo.name, description, tech_stack, skipped: false })
   }
 
   // 스킬 집계
