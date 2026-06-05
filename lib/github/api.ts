@@ -41,6 +41,13 @@ async function ghFetch<T>(token: string, path: string): Promise<T> {
 }
 
 /**
+ * Single repo info.
+ */
+export async function fetchRepo(token: string, fullName: string): Promise<GithubRepo> {
+  return ghFetch<GithubRepo>(token, `/repos/${fullName}`)
+}
+
+/**
  * Authenticated user's repos (all, including forks).
  */
 export async function fetchUserRepos(token: string): Promise<GithubRepo[]> {

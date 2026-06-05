@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { decrypt } from '@/lib/crypto'
 import {
   fetchUserRepos,
+  fetchRepo,
   fetchRepoLanguages,
   fetchRepoCommits,
   fetchUserStats,
@@ -54,13 +55,12 @@ export async function analyzeRepo(repoFullName: string): Promise<RepoAnalysis> {
   const anthropicKey = decrypt(profile.anthropic_api_key)
   const githubUsername = (user.user_metadata?.user_name ?? '') as string
 
-  const [languages, commits, allRepos] = await Promise.all([
+  const [languages, commits, repo] = await Promise.all([
     fetchRepoLanguages(token, repoFullName),
     fetchRepoCommits(token, repoFullName, githubUsername),
-    fetchUserRepos(token),
+    fetchRepo(token, repoFullName),
   ])
 
-  const repo = allRepos.find(r => r.full_name === repoFullName)
   const tech_stack = Object.keys(languages).slice(0, 8)
 
   const summary = await summarizeProjectFromCommits(
@@ -75,8 +75,8 @@ export async function analyzeRepo(repoFullName: string): Promise<RepoAnalysis> {
     title: repoFullName.split('/')[1],
     description: summary.description || repo?.description || '',
     tech_stack: summary.tech_highlights.length > 0 ? summary.tech_highlights : tech_stack,
-    github_url: repo?.html_url ?? `https://github.com/${repoFullName}`,
-    demo_url: repo?.homepage ?? '',
+    github_url: repo.html_url,
+    demo_url: repo.homepage ?? '',
   }
 }
 
