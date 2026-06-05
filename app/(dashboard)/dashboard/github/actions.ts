@@ -12,37 +12,48 @@ import {
 } from '@/lib/github/api'
 import { summarizeProjectFromCommits } from '@/lib/anthropic/summarize'
 
-export async function getMyRepos(): Promise<GithubRepo[]> {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.provider_token) {
+async function getGithubToken(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<string> {
+  const { data } = await supabase
+    .from('users')
+    .select('github_token')
+    .eq('id', userId)
+    .single()
+  if (!data?.github_token) {
     throw new Error('GitHub 토큰을 찾을 수 없습니다. 로그아웃 후 다시 로그인해주세요.')
   }
-  return fetchUserRepos(session.provider_token)
+  return decrypt(data.github_token)
+}
+
+export async function getMyRepos(): Promise<GithubRepo[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+  const token = await getGithubToken(supabase, user.id)
+  return fetchUserRepos(token)
 }
 
 export async function importSelectedRepos(repoFullNames: string[]): Promise<void> {
   if (repoFullNames.length === 0) return
 
   const supabase = await createClient()
-  const [{ data: { session } }, { data: { user } }] = await Promise.all([
-    supabase.auth.getSession(),
-    supabase.auth.getUser(),
-  ])
-  if (!user || !session?.provider_token) throw new Error('Unauthorized')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
 
   const { data: profile } = await supabase
     .from('users')
-    .select('anthropic_api_key')
+    .select('anthropic_api_key, github_token')
     .eq('id', user.id)
     .single()
 
   if (!profile?.anthropic_api_key) {
     throw new Error('Anthropic API 키가 등록되어 있지 않습니다. 설정에서 먼저 등록해주세요.')
   }
+  if (!profile?.github_token) {
+    throw new Error('GitHub 토큰을 찾을 수 없습니다. 로그아웃 후 다시 로그인해주세요.')
+  }
 
   const anthropicKey = decrypt(profile.anthropic_api_key)
-  const token = session.provider_token
+  const token = decrypt(profile.github_token)
   const githubUsername = (user.user_metadata?.user_name ?? '') as string
 
   const allRepos = await fetchUserRepos(token)
