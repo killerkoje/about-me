@@ -7,6 +7,7 @@ import {
   fetchRepo,
   fetchRepoLanguages,
   fetchRepoCommits,
+  fetchRepoReadme,
   fetchUserStats,
   fetchRepoCommitCount,
   type GithubRepo,
@@ -55,10 +56,11 @@ export async function analyzeRepo(repoFullName: string): Promise<RepoAnalysis> {
   const anthropicKey = decrypt(profile.anthropic_api_key)
   const githubUsername = (user.user_metadata?.user_name ?? '') as string
 
-  const [languages, commits, repo] = await Promise.all([
+  const [languages, commits, repo, readme] = await Promise.all([
     fetchRepoLanguages(token, repoFullName),
     fetchRepoCommits(token, repoFullName, githubUsername),
     fetchRepo(token, repoFullName),
+    fetchRepoReadme(token, repoFullName),
   ])
 
   const tech_stack = Object.keys(languages).slice(0, 8)
@@ -72,7 +74,8 @@ export async function analyzeRepo(repoFullName: string): Promise<RepoAnalysis> {
       repoName,
       commits,
       tech_stack,
-      repo.description ?? null
+      repo.description ?? null,
+      readme
     )
     if (summary.description) {
       const highlights = summary.tech_highlights.length > 0
@@ -140,18 +143,19 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<Repo
 
   const repoDetails = await Promise.all(
     selected.map(async repo => {
-      const [languages, commits] = await Promise.all([
+      const [languages, commits, readme] = await Promise.all([
         fetchRepoLanguages(token, repo.full_name),
         fetchRepoCommits(token, repo.full_name, githubUsername),
+        fetchRepoReadme(token, repo.full_name),
       ])
       Object.entries(languages).forEach(([lang, bytes]) => {
         languageTotals[lang] = (languageTotals[lang] ?? 0) + bytes
       })
-      return { repo, languages, commits }
+      return { repo, languages, commits, readme }
     })
   )
 
-  for (const { repo, languages, commits } of repoDetails) {
+  for (const { repo, languages, commits, readme } of repoDetails) {
     const { data: existing } = await supabase
       .from('projects')
       .select('id')
@@ -173,10 +177,10 @@ export async function importSelectedRepos(repoFullNames: string[]): Promise<Repo
         repo.name,
         commits,
         tech_stack,
-        repo.description
+        repo.description,
+        readme
       )
       if (summary.description) {
-        // 서술 + 구현 포인트를 description에 합침
         const highlights = summary.tech_highlights.length > 0
           ? `\n\n주요 구현: ${summary.tech_highlights.join(' · ')}`
           : ''

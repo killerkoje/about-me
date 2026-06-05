@@ -41,6 +41,21 @@ async function ghFetch<T>(token: string, path: string): Promise<T> {
 }
 
 /**
+ * README.md content (decoded from base64). Returns null if not found.
+ */
+export async function fetchRepoReadme(token: string, fullName: string): Promise<string | null> {
+  try {
+    const data = await ghFetch<{ content: string; encoding: string }>(token, `/repos/${fullName}/readme`)
+    if (data.encoding === 'base64') {
+      return Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf-8').slice(0, 3000)
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Single repo info.
  */
 export async function fetchRepo(token: string, fullName: string): Promise<GithubRepo> {
@@ -76,7 +91,7 @@ export async function fetchRepoLanguages(
 }
 
 /**
- * Commit subject lines for a repo (author-filtered, last 6 months, max 200).
+ * Commit subject lines for a repo (author-filtered, max 500).
  */
 export async function fetchRepoCommits(
   token: string,
@@ -85,17 +100,13 @@ export async function fetchRepoCommits(
 ): Promise<string[]> {
   const messages: string[] = []
   let page = 1
-  const maxPages = 2
-
-  const since = new Date()
-  since.setMonth(since.getMonth() - 6)
-  const sinceParam = since.toISOString()
+  const maxPages = 5
 
   while (page <= maxPages) {
     try {
       const batch = await ghFetch<GithubCommit[]>(
         token,
-        `/repos/${fullName}/commits?author=${author}&per_page=100&page=${page}&since=${sinceParam}`
+        `/repos/${fullName}/commits?author=${author}&per_page=100&page=${page}`
       )
       if (batch.length === 0) break
       batch.forEach(c => {
