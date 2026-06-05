@@ -55,7 +55,11 @@ ${repoContext}
           }
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : '오류가 발생했습니다'
+        const raw = err instanceof Error ? err.message : String(err)
+        const isCreditError = raw.includes('credit balance is too low') || raw.includes('insufficient_quota')
+        const msg = isCreditError
+          ? 'Anthropic API 크레딧이 부족합니다. console.anthropic.com → Plans & Billing에서 크레딧을 충전한 후 다시 채팅해주세요.'
+          : `오류가 발생했습니다: ${raw}`
         controller.enqueue(encoder.encode(`\n\n[오류: ${msg}]`))
       } finally {
         controller.close()
