@@ -1,65 +1,52 @@
-import Image from "next/image";
-
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="flex h-screen font-sans">
+      {/* 왼쪽 패널 - 소셜 링크 */}
+      <aside className="w-44 flex flex-col gap-8 py-10 px-8 bg-white border-r border-gray-100 shrink-0">
+        <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">Portfolio</span>
+        <nav className="flex flex-col gap-4">
+          <a
+            href="https://github.com/LEEHEEWON123"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-gray-900 hover:text-black transition-colors duration-200"
+          >
+            Github.
+          </a>
+          <a
+            href="https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-gray-900 hover:text-black transition-colors duration-200"
+          >
+            LinkedIn.
+          </a>
+          <a
+            href="/projects"
+            className="text-sm text-gray-900 hover:text-black transition-colors duration-200"
+          >
+            Projects.
+          </a>
+        </nav>
+        <span className="text-[11px] text-gray-500">leeheewon © 2026</span>
+      </aside>
+
+      {/* 오른쪽 패널 - 메인 소개 */}
+      <main className="flex-1 bg-gray-100 flex items-center px-16 py-12">
+        <div className="max-w-lg">
+          <p className="text-xs tracking-widest text-gray-400 uppercase mb-6">Developer</p>
+          <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-8">
+            이희원<br />입니다.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-sm text-gray-500 leading-8">
+            제가 만든 서비스에 접속하는 누구나<br />
+            설명없이 간편하고 쉽게 이용할 수 있습니다.<br />
+            끊임없이 아이디어를 내고 설명이 필요없고<br />
+            간편하며 임팩트 있는 서비스를 구성하는<br />
+            개발자를 꿈꾸고 있습니다.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
         </div>
       </main>
     </div>
-  );
+  )
 }

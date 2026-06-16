@@ -27,13 +27,7 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // / 또는 /login → 로그인 상태면 대시보드, 아니면 /login으로
-  if (pathname === '/' || pathname === '/login') {
-    if (user) return NextResponse.redirect(new URL('/dashboard', request.url))
-    if (pathname === '/') return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // /dashboard/* 보호
+  // /dashboard/* 보호 - 로그인 필요
   if (pathname.startsWith('/dashboard') && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
@@ -42,5 +36,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*', '/login'],
+  matcher: ['/dashboard/:path*'],
 }
