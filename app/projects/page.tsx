@@ -52,6 +52,20 @@ const EXCLUDED_REPOS = [
   'vogopang_back',
 ]
 
+const SIDE_PROJECTS = [
+  'about-me',
+  'Cultural-Heritage-Outing',
+  'village-run',
+  'lucky-defense',
+  'harness_build',
+  'nugu-seyo',
+  'face-fortune',
+  'call-distance-tracker',
+  'legal-recorder-hybrid',
+  'gomoku_algorithm_test',
+  'llm_test',
+]
+
 export default async function ProjectsPage() {
   const token = process.env.GITHUB_TOKEN
   const username = 'LEEHEEWON123'
@@ -68,34 +82,58 @@ export default async function ProjectsPage() {
     }
   }
 
+  const sideRepos = repos.filter(r => SIDE_PROJECTS.includes(r.name))
+  const companyRepos = repos.filter(r => !SIDE_PROJECTS.includes(r.name))
+
+  const RepoCard = ({ repo }: { repo: any }) => {
+    const meta = PROJECT_META[repo.name]
+    return (
+      <div className="bg-white rounded-xl p-5 border border-gray-100 hover:border-gray-300 transition-all flex flex-col">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <span className="text-sm font-semibold text-gray-900 truncate">{repo.name}</span>
+          {repo.private && (
+            <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded shrink-0">private</span>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 leading-5 mb-3 line-clamp-2">
+          {meta?.description ?? repo.description ?? ''}
+        </p>
+        {meta?.highlights && (
+          <ul className="flex flex-col gap-1 mb-4">
+            {meta.highlights.map((h: string, i: number) => (
+              <li key={i} className="flex items-start gap-1.5 text-[11px] text-gray-500">
+                <span className="mt-0.5 shrink-0 text-gray-300">●</span>
+                {h}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex items-center justify-between mt-auto">
+          <div className="flex items-center gap-3">
+            {repo.language && <span className="text-[11px] text-gray-400">{repo.language}</span>}
+            {repo.stargazers_count > 0 && <span className="text-[11px] text-gray-400">★ {repo.stargazers_count}</span>}
+          </div>
+          {meta && (
+            <Link href={`/projects/${repo.name}`} className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors">
+              자세히 보기 →
+            </Link>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen font-sans">
       {/* 왼쪽 패널 */}
       <aside className="w-44 flex flex-col gap-8 py-10 px-8 bg-white border-r border-gray-100 shrink-0">
         <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">Portfolio</span>
         <nav className="flex flex-col gap-4">
-          <a
-            href="https://github.com/LEEHEEWON123"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-gray-900 hover:text-black transition-colors duration-200"
-          >
-            Github.
-          </a>
-          <a
-            href="https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-gray-900 hover:text-black transition-colors duration-200"
-          >
-            LinkedIn.
-          </a>
-          <a
-            href="/projects"
-            className="text-sm text-black font-semibold transition-colors duration-200"
-          >
-            Projects.
-          </a>
+          <a href="https://github.com/LEEHEEWON123" target="_blank" rel="noopener noreferrer"
+            className="text-sm text-gray-900 hover:text-black transition-colors duration-200">Github.</a>
+          <a href="https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/" target="_blank" rel="noopener noreferrer"
+            className="text-sm text-gray-900 hover:text-black transition-colors duration-200">LinkedIn.</a>
+          <a href="/projects" className="text-sm text-black font-semibold transition-colors duration-200">Projects.</a>
         </nav>
         <span className="text-[11px] text-gray-500">leeheewon © 2026</span>
       </aside>
@@ -103,81 +141,30 @@ export default async function ProjectsPage() {
       {/* 오른쪽 - 프로젝트 목록 */}
       <main className="flex-1 bg-gray-100 overflow-y-auto px-10 py-10">
         <div className="max-w-3xl">
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 mb-10">
             <Link href="/" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">← back</Link>
             <h1 className="text-lg font-bold text-gray-900">Projects.</h1>
-            {repos.length > 0 && (
-              <span className="text-xs text-gray-400">{repos.length}개</span>
-            )}
           </div>
 
-          {!token && (
-            <p className="text-sm text-gray-400">GITHUB_TOKEN 환경변수를 설정해주세요.</p>
+          {!token && <p className="text-sm text-gray-400">GITHUB_TOKEN 환경변수를 설정해주세요.</p>}
+          {error && <p className="text-sm text-red-400">GitHub API 오류가 발생했습니다.</p>}
+
+          {companyRepos.length > 0 && (
+            <section className="mb-10">
+              <h2 className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-4">Company</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {companyRepos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
+              </div>
+            </section>
           )}
 
-          {error && (
-            <p className="text-sm text-red-400">GitHub API 오류가 발생했습니다.</p>
-          )}
-
-          {repos.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {repos.map((repo) => {
-                const meta = PROJECT_META[repo.name]
-                return (
-                  <div
-                    key={repo.id}
-                    className="bg-white rounded-xl p-5 border border-gray-100 hover:border-gray-300 transition-all flex flex-col"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-sm font-semibold text-gray-900 truncate">
-                        {repo.name}
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {repo.private && (
-                          <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
-                            private
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-gray-500 leading-5 mb-3 line-clamp-2">
-                      {meta?.description ?? repo.description ?? ''}
-                    </p>
-
-                    {meta?.highlights && (
-                      <ul className="flex flex-col gap-1 mb-4">
-                        {meta.highlights.map((h, i) => (
-                          <li key={i} className="flex items-start gap-1.5 text-[11px] text-gray-500">
-                            <span className="mt-0.5 shrink-0 text-gray-300">●</span>
-                            {h}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    <div className="flex items-center justify-between mt-auto">
-                      <div className="flex items-center gap-3">
-                        {repo.language && (
-                          <span className="text-[11px] text-gray-400">{repo.language}</span>
-                        )}
-                        {repo.stargazers_count > 0 && (
-                          <span className="text-[11px] text-gray-400">★ {repo.stargazers_count}</span>
-                        )}
-                      </div>
-                      {meta && (
-                        <Link
-                          href={`/projects/${repo.name}`}
-                          className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors"
-                        >
-                          자세히 보기 →
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+          {sideRepos.length > 0 && (
+            <section>
+              <h2 className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-4">Side Projects</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {sideRepos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
+              </div>
+            </section>
           )}
         </div>
       </main>
