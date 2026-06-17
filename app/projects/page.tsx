@@ -49,6 +49,7 @@ const EXCLUDED_REPOS = [
   'dubright_back',
   'dubright_record',
   'vogopang-b2c-app',
+  'vogopang_back',
 ]
 
 export default async function ProjectsPage() {
