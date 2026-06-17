@@ -1,5 +1,5 @@
 import { fetchUserRepos } from '@/lib/github/api'
-import { PROJECT_META } from '@/lib/projects-meta'
+import ProjectsTabs from '@/components/portfolio/ProjectsTabs'
 import Link from 'next/link'
 
 const EXCLUDED_REPOS = [
@@ -85,44 +85,6 @@ export default async function ProjectsPage() {
   const sideRepos = repos.filter(r => SIDE_PROJECTS.includes(r.name))
   const companyRepos = repos.filter(r => !SIDE_PROJECTS.includes(r.name))
 
-  const RepoCard = ({ repo }: { repo: any }) => {
-    const meta = PROJECT_META[repo.name]
-    return (
-      <div className="bg-white rounded-xl p-5 border border-gray-100 hover:border-gray-300 transition-all flex flex-col">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <span className="text-sm font-semibold text-gray-900 truncate">{repo.name}</span>
-          {repo.private && (
-            <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded shrink-0">private</span>
-          )}
-        </div>
-        <p className="text-xs text-gray-500 leading-5 mb-3 line-clamp-2">
-          {meta?.description ?? repo.description ?? ''}
-        </p>
-        {meta?.highlights && (
-          <ul className="flex flex-col gap-1 mb-4">
-            {meta.highlights.map((h: string, i: number) => (
-              <li key={i} className="flex items-start gap-1.5 text-[11px] text-gray-500">
-                <span className="mt-0.5 shrink-0 text-gray-300">●</span>
-                {h}
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="flex items-center justify-between mt-auto">
-          <div className="flex items-center gap-3">
-            {repo.language && <span className="text-[11px] text-gray-400">{repo.language}</span>}
-            {repo.stargazers_count > 0 && <span className="text-[11px] text-gray-400">★ {repo.stargazers_count}</span>}
-          </div>
-          {meta && (
-            <Link href={`/projects/${repo.name}`} className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors">
-              자세히 보기 →
-            </Link>
-          )}
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex h-screen font-sans">
       {/* 왼쪽 패널 */}
@@ -141,7 +103,7 @@ export default async function ProjectsPage() {
       {/* 오른쪽 - 프로젝트 목록 */}
       <main className="flex-1 bg-gray-100 overflow-y-auto px-10 py-10">
         <div className="max-w-3xl">
-          <div className="flex items-center gap-4 mb-10">
+          <div className="flex items-center gap-4 mb-8">
             <Link href="/" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">← back</Link>
             <h1 className="text-lg font-bold text-gray-900">Projects.</h1>
           </div>
@@ -149,22 +111,8 @@ export default async function ProjectsPage() {
           {!token && <p className="text-sm text-gray-400">GITHUB_TOKEN 환경변수를 설정해주세요.</p>}
           {error && <p className="text-sm text-red-400">GitHub API 오류가 발생했습니다.</p>}
 
-          {companyRepos.length > 0 && (
-            <section className="mb-10">
-              <h2 className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-4">Company</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {companyRepos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
-              </div>
-            </section>
-          )}
-
-          {sideRepos.length > 0 && (
-            <section>
-              <h2 className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-4">Side Projects</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {sideRepos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
-              </div>
-            </section>
+          {repos.length > 0 && (
+            <ProjectsTabs companyRepos={companyRepos} sideRepos={sideRepos} />
           )}
         </div>
       </main>
