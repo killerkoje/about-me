@@ -86,9 +86,19 @@ export default async function ProjectsPage() {
   const companyRepos = repos.filter(r => !SIDE_PROJECTS.includes(r.name))
 
   return (
-    <div className="flex h-screen font-sans">
-      {/* 왼쪽 패널 */}
-      <aside className="w-44 flex flex-col gap-8 py-10 px-8 bg-white border-r border-gray-100 shrink-0">
+    <div className="flex flex-col sm:flex-row min-h-screen font-sans">
+      {/* 모바일 상단 헤더 */}
+      <header className="flex sm:hidden items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
+        <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">Portfolio</span>
+        <nav className="flex items-center gap-4">
+          <a href="https://github.com/LEEHEEWON123" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-900">Github.</a>
+          <a href="https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-900">LinkedIn.</a>
+          <a href="/projects" className="text-xs text-black font-semibold">Projects.</a>
+        </nav>
+      </header>
+
+      {/* 왼쪽 패널 (데스크톱) */}
+      <aside className="hidden sm:flex w-44 flex-col gap-8 py-10 px-8 bg-white border-r border-gray-100 shrink-0">
         <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">Portfolio</span>
         <nav className="flex flex-col gap-4">
           <a href="https://github.com/LEEHEEWON123" target="_blank" rel="noopener noreferrer"
@@ -101,7 +111,7 @@ export default async function ProjectsPage() {
       </aside>
 
       {/* 오른쪽 - 프로젝트 목록 */}
-      <main className="flex-1 bg-gray-100 overflow-y-auto px-10 py-10">
+      <main className="flex-1 bg-gray-100 overflow-y-auto px-6 sm:px-10 py-8 sm:py-10">
         <div className="max-w-3xl">
           <div className="flex items-center gap-4 mb-8">
             <Link href="/" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">← back</Link>

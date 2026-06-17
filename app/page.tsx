@@ -23,11 +23,40 @@ export default function Home() {
     return () => window.removeEventListener('mousemove', onMove)
   }, [])
 
+  const navLinks = [
+    { label: 'Github.', href: 'https://github.com/LEEHEEWON123', external: true },
+    { label: 'LinkedIn.', href: 'https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/', external: true },
+    { label: 'Projects.', href: '/projects', external: false },
+  ]
+
   return (
-    <div className="flex h-screen font-sans overflow-hidden">
-      {/* 왼쪽 패널 */}
+    <div className="flex flex-col sm:flex-row min-h-screen font-sans">
+      {/* 모바일 상단 헤더 */}
+      <header
+        className="flex sm:hidden items-center justify-between px-6 py-4 bg-white border-b border-gray-100 z-10"
+        style={{
+          opacity: mounted ? 1 : 0,
+          transition: 'opacity 0.6s ease',
+        }}
+      >
+        <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">Portfolio</span>
+        <nav className="flex items-center gap-4">
+          {navLinks.map(({ label, href, external }) => (
+            <a
+              key={label}
+              href={href}
+              {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              className="text-xs text-gray-900"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+      </header>
+
+      {/* 왼쪽 패널 (데스크톱) */}
       <aside
-        className="w-44 flex flex-col gap-8 py-10 px-8 bg-white border-r border-gray-100 shrink-0 z-10"
+        className="hidden sm:flex w-44 flex-col gap-8 py-10 px-8 bg-white border-r border-gray-100 shrink-0 z-10"
         style={{
           opacity: mounted ? 1 : 0,
           transform: mounted ? 'translateX(0)' : 'translateX(-8px)',
@@ -36,11 +65,7 @@ export default function Home() {
       >
         <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">Portfolio</span>
         <nav className="flex flex-col gap-4">
-          {[
-            { label: 'Github.', href: 'https://github.com/LEEHEEWON123', external: true },
-            { label: 'LinkedIn.', href: 'https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/', external: true },
-            { label: 'Projects.', href: '/projects', external: false },
-          ].map(({ label, href, external }) => (
+          {navLinks.map(({ label, href, external }) => (
             <a
               key={label}
               href={href}
@@ -61,7 +86,7 @@ export default function Home() {
       </aside>
 
       {/* 오른쪽 패널 */}
-      <main className="flex-1 bg-gray-100 flex items-center px-16 py-12 relative overflow-hidden">
+      <main className="flex-1 bg-gray-100 flex items-center px-8 sm:px-16 py-12 relative overflow-hidden min-h-[80vh] sm:min-h-screen">
         {/* 마우스 패럴랙스 배경 요소 */}
         <div
           ref={mainRef}

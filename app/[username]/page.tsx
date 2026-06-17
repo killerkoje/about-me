@@ -51,7 +51,7 @@ export default async function PortfolioPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-100 px-6 h-12 flex items-center">
+      <nav className="bg-white border-b border-gray-100 px-4 sm:px-6 h-12 flex items-center">
         <span className="font-bold bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">devfolio</span>
       </nav>
       <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-8">
