@@ -110,17 +110,25 @@ export default function Home() {
             Developer
           </p>
 
-          {/* 이름 */}
-          <h1
-            className="text-5xl font-bold text-gray-900 leading-tight mb-8"
+          {/* 이름 + 가상공간 버튼 */}
+          <div
             style={{
               opacity: mounted ? 1 : 0,
               transform: mounted ? 'translateY(0)' : 'translateY(20px)',
               transition: 'opacity 0.7s ease 0.25s, transform 0.7s ease 0.25s',
+              marginBottom: '32px',
             }}
           >
-            이희원입니다.
-          </h1>
+            <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-5">
+              이희원입니다.
+            </h1>
+            <a
+              href="/village"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold tracking-wide hover:bg-gray-700 transition-colors"
+            >
+              🏘️ 가상공간 확인하기
+            </a>
+          </div>
 
           {/* 소개글 */}
           <p
