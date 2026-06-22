@@ -84,6 +84,16 @@ export default function ProjectsTabs({ companyRepos, sideRepos }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {repos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
       </div>
+
+      {/* 디자인 프리뷰 버튼 */}
+      <div className="mt-10 flex justify-center">
+        <Link
+          href="/design-preview"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors shadow-sm"
+        >
+          Design Preview 보기 →
+        </Link>
+      </div>
     </div>
   )
 }
