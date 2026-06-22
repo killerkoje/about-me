@@ -1,10 +1,11 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import DesignPreviewLoading from '@/components/design-preview/DesignPreviewLoading'
 
 const DesignPreviewWorld = dynamic(
   () => import('@/components/design-preview/DesignPreviewWorld'),
-  { ssr: false },
+  { ssr: false, loading: () => <DesignPreviewLoading /> },
 )
 
 export default function DesignPreviewPage() {

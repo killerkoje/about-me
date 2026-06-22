@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useRouter } from 'next/navigation'
 import * as THREE from 'three'
@@ -15,6 +15,7 @@ import {
   PALETTE,
 } from './kokuyo-three-shared'
 import { mouse, useGlobalMouse } from './mouse-store'
+import { CANVAS_GL, getCanvasDpr } from './canvas-settings'
 import { Tag } from './design-ui'
 import { ArrowLeft, ArrowUpRight, ChevronRight } from 'lucide-react'
 
@@ -23,7 +24,6 @@ const ACCENTS = [LIME, ORANGE, YELLOW]
 function DetailBook({ study, index }: { study: CaseStudy; index: number }) {
   const g = useRef<THREE.Group>(null)
   const texture = useMemo(() => createBookPortraitTexture(study, index), [study, index])
-  useEffect(() => () => texture.dispose(), [texture])
 
   const w = 0.68
   const h = 1.22
@@ -111,6 +111,11 @@ export default function CaseStudyWorld({ study, next, index }: Props) {
   const palette = PALETTE[index % PALETTE.length]
   const num = String(index + 1).padStart(2, '0')
   const insight = study.researchInsights[0]
+  const [dpr, setDpr] = useState(1)
+
+  useEffect(() => {
+    setDpr(getCanvasDpr())
+  }, [])
 
   return (
     <div className="relative min-h-dvh" style={{ background: MINT }}>
@@ -153,7 +158,7 @@ export default function CaseStudyWorld({ study, next, index }: Props) {
             className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-32 rounded-full opacity-40 blur-2xl"
             style={{ background: accent }}
           />
-          <Canvas camera={{ position: [0, 0.05, 2.5], fov: 42 }} dpr={[1, 2]} gl={{ antialias: true }}>
+          <Canvas camera={{ position: [0, 0.05, 2.5], fov: 42 }} dpr={dpr} gl={CANVAS_GL}>
             <color attach="background" args={['transparent']} />
             <ambientLight intensity={1} />
             <DetailBook study={study} index={index} />
@@ -314,7 +319,7 @@ export default function CaseStudyWorld({ study, next, index }: Props) {
             </span>
           </div>
           <div className="w-full h-full">
-            <Canvas camera={{ position: [0, 0.05, 2.65], fov: 40 }} dpr={[1, 2]} gl={{ antialias: true }}>
+            <Canvas camera={{ position: [0, 0.05, 2.65], fov: 40 }} dpr={dpr} gl={CANVAS_GL}>
               <color attach="background" args={['transparent']} />
               <ambientLight intensity={1} />
               <DetailBook study={study} index={index} />

@@ -1,18 +1,18 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Canvas } from '@react-three/fiber'
-import BookShelf from './BookShelf'
-import { wrapIndex } from './use-book-carousel-scroll'
+import dynamic from 'next/dynamic'
+import { wrapIndex } from './wrap-index'
 import { useRouter } from 'next/navigation'
-import type { CaseStudy } from '@/app/design-preview/data'
-import { CASE_STUDIES } from '@/app/design-preview/data'
+import { CASE_STUDY_SHELF, type CaseStudyShelf } from '@/app/design-preview/shelf-data'
 import { INK, MINT } from './kokuyo-three-shared'
 import { useGlobalMouse } from './mouse-store'
 import { Ghost, Tag } from './design-ui'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-const PROJECTS = CASE_STUDIES
+const DesignPreviewScene = dynamic(() => import('./DesignPreviewScene'), { ssr: false })
+
+const PROJECTS = CASE_STUDY_SHELF
 const SCROLL_GAIN = 0.004
 
 function BookControls({
@@ -22,7 +22,7 @@ function BookControls({
 }: {
   index: number
   total: number
-  project: CaseStudy
+  project: CaseStudyShelf
 }) {
   return (
     <div className="mt-8 flex flex-col gap-3 pointer-events-auto max-w-sm">
@@ -90,7 +90,7 @@ function HeroOverlay({
   project,
   projectIndex,
 }: {
-  project: CaseStudy
+  project: CaseStudyShelf
   projectIndex: number
 }) {
   return (
@@ -231,22 +231,7 @@ export default function DesignPreviewWorld() {
     <div className="absolute inset-0 overflow-hidden" style={{ background: MINT }}>
       <HeroOverlay project={project} projectIndex={activeIndex} />
       <ShelfNavButtons onPrev={goPrev} onNext={goNext} scrollZoneRef={scrollZoneRef} />
-
-      <Canvas
-        className="!absolute inset-0 z-[5]"
-        camera={{ position: [0, 0.12, 5.1], fov: 36 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true }}
-        style={{ pointerEvents: 'auto' }}
-      >
-        <color attach="background" args={[MINT]} />
-        <ambientLight intensity={1} />
-        <BookShelf
-          projects={PROJECTS}
-          floatIndex={floatIndex}
-          onSelect={openBook}
-        />
-      </Canvas>
+      <DesignPreviewScene projects={PROJECTS} floatIndex={floatIndex} onSelect={openBook} />
     </div>
   )
 }

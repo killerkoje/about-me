@@ -1,9 +1,9 @@
 'use client'
 
-import { useRef, useEffect, useMemo } from 'react'
-import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
+import { useRef, useMemo } from 'react'
+import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
-import type { CaseStudy } from '@/app/design-preview/data'
+import type { CaseStudyShelf } from '@/app/design-preview/shelf-data'
 import { createBookPortraitTexture, INK, LIME } from './kokuyo-three-shared'
 import { mouse } from './mouse-store'
 
@@ -32,7 +32,7 @@ function BookletMesh({
   onSelect,
   disabled,
 }: {
-  project: CaseStudy
+  project: CaseStudyShelf
   projectIndex: number
   frontProjectRef: React.RefObject<number>
   smoothIndexRef: React.RefObject<number>
@@ -40,14 +40,7 @@ function BookletMesh({
   onSelect: () => void
   disabled: boolean
 }) {
-  const { gl } = useThree()
-  const texture = useMemo(() => {
-    const t = createBookPortraitTexture(project, projectIndex)
-    t.anisotropy = gl.capabilities.getMaxAnisotropy()
-    return t
-  }, [project, projectIndex, gl])
-
-  useEffect(() => () => texture.dispose(), [texture])
+  const texture = useMemo(() => createBookPortraitTexture(project, projectIndex), [project, projectIndex])
 
   const t = 0.014
   const down = useRef<{ x: number; y: number } | null>(null)
@@ -96,7 +89,7 @@ function BookletMesh({
 }
 
 type Props = {
-  projects: CaseStudy[]
+  projects: CaseStudyShelf[]
   floatIndex: number
   onSelect: (id: string) => void
   disabled?: boolean

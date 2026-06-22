@@ -3,10 +3,11 @@
 import dynamic from 'next/dynamic'
 import { useParams } from 'next/navigation'
 import { CASE_STUDIES } from '../data'
+import DesignPreviewLoading from '@/components/design-preview/DesignPreviewLoading'
 
 const CaseStudyWorld = dynamic(
   () => import('@/components/design-preview/CaseStudyWorld'),
-  { ssr: false },
+  { ssr: false, loading: () => <DesignPreviewLoading /> },
 )
 
 export default function CaseStudyPage() {

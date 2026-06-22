@@ -3,15 +3,13 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useScroll } from '@react-three/drei'
+import { wrapIndex } from './wrap-index'
+
+export { wrapIndex }
 
 const SCROLL_GAIN = 0.005
 const DRAG_GAIN = 0.0038
 const SWIPE_THRESHOLD = 32
-
-export function wrapIndex(value: number, length: number) {
-  if (length <= 0) return 0
-  return ((Math.round(value) % length) + length) % length
-}
 
 export function useBookCarouselScroll(
   floatIndex: number,

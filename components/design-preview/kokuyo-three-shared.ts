@@ -1,6 +1,10 @@
 import * as THREE from 'three'
 import type { CaseStudy } from '@/app/design-preview/data'
 
+export type BookCoverFields = Pick<CaseStudy, 'id' | 'title' | 'category'>
+
+const portraitTextureCache = new Map<string, THREE.CanvasTexture>()
+
 export const LIME = '#c8e64a'
 export const ORANGE = '#e8572a'
 export const YELLOW = '#f5c842'
@@ -160,11 +164,14 @@ export function createCardTextureFromProject(project: CaseStudy, index: number) 
 }
 
 /** Portrait book cover — tall format for shelf */
-export function createBookPortraitTexture(project: CaseStudy, index: number) {
+export function createBookPortraitTexture(project: BookCoverFields, index: number) {
+  const cached = portraitTextureCache.get(project.id)
+  if (cached) return cached
+
   const palette = PALETTE[index % PALETTE.length]
   const canvas = document.createElement('canvas')
-  canvas.width = 720
-  canvas.height = 1024
+  canvas.width = 480
+  canvas.height = 680
   const ctx = canvas.getContext('2d')!
   const w = canvas.width
   const h = canvas.height
@@ -179,24 +186,25 @@ export function createBookPortraitTexture(project: CaseStudy, index: number) {
 
   ctx.strokeStyle = 'rgba(0,0,0,0.12)'
   ctx.lineWidth = 3
-  ctx.strokeRect(40, 40, w - 80, h - 80)
+  ctx.strokeRect(32, 32, w - 64, h - 64)
 
   ctx.fillStyle = palette.ink
   ctx.globalAlpha = 0.45
-  ctx.font = '900 96px system-ui, sans-serif'
-  ctx.fillText(String(index + 1).padStart(2, '0'), 52, 130)
+  ctx.font = '900 72px system-ui, sans-serif'
+  ctx.fillText(String(index + 1).padStart(2, '0'), 44, 100)
   ctx.globalAlpha = 0.55
-  ctx.font = '700 26px system-ui, sans-serif'
-  ctx.fillText(project.category.toUpperCase(), 52, h - 100)
+  ctx.font = '700 22px system-ui, sans-serif'
+  ctx.fillText(project.category.toUpperCase(), 44, h - 72)
   ctx.globalAlpha = 1
-  ctx.font = '900 42px system-ui, sans-serif'
-  wrapText(ctx, project.title, 52, h - 56, w - 104, 50)
+  ctx.font = '900 34px system-ui, sans-serif'
+  wrapText(ctx, project.title, 44, h - 44, w - 88, 42)
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.minFilter = THREE.LinearFilter
   texture.magFilter = THREE.LinearFilter
-  texture.generateMipmaps = true
+  texture.generateMipmaps = false
+  portraitTextureCache.set(project.id, texture)
   return texture
 }
 
