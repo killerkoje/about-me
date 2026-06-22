@@ -60,8 +60,9 @@ export default function ProjectsTabs({ companyRepos, sideRepos }: Props) {
 
   return (
     <div>
-      {/* 탭 */}
-      <div className="flex gap-2 mb-8 bg-white rounded-2xl p-1.5 w-fit border border-gray-100 shadow-sm">
+      {/* 탭 + 디자인 프리뷰 버튼 */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex gap-2 bg-white rounded-2xl p-1.5 w-fit border border-gray-100 shadow-sm">
         {tabs.map(tab => (
           <button
             key={tab.key}
@@ -78,21 +79,18 @@ export default function ProjectsTabs({ companyRepos, sideRepos }: Props) {
             </span>
           </button>
         ))}
+        </div>
+        <Link
+          href="/design-preview"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-medium hover:bg-gray-700 transition-colors shadow-sm"
+        >
+          Design Preview →
+        </Link>
       </div>
 
       {/* 카드 그리드 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {repos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
-      </div>
-
-      {/* 디자인 프리뷰 버튼 */}
-      <div className="mt-10 flex justify-center">
-        <Link
-          href="/design-preview"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors shadow-sm"
-        >
-          Design Preview 보기 →
-        </Link>
       </div>
     </div>
   )
