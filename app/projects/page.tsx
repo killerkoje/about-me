@@ -117,8 +117,19 @@ export default async function ProjectsPage() {
     aggregateLanguages(sideRepos),
   ])
 
-  // 봇파더 기반 자동화 코드라 실제 작성 스택 아님
-  delete companyLanguages['Python']
+  // 실제 작성 스택이 아닌 언어 제외 (봇파더 자동화, 인프라/설정 파일 등)
+  const EXCLUDED_COMPANY_LANGS = [
+    'Python',
+    'Jinja',
+    'CSS',
+    'Shell',
+    'PowerShell',
+    'C',
+    'Go Template',
+  ]
+  for (const lang of EXCLUDED_COMPANY_LANGS) {
+    delete companyLanguages[lang]
+  }
 
   return (
     <div className="flex flex-col sm:flex-row min-h-screen font-sans">
