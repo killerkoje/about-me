@@ -3,11 +3,101 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { PROJECT_META } from '@/lib/projects-meta'
-import type { GithubRepo } from '@/lib/github/api'
+import type { GithubRepo, GithubLanguages } from '@/lib/github/api'
 
 type Props = {
   companyRepos: GithubRepo[]
   sideRepos: GithubRepo[]
+  companyLanguages: GithubLanguages
+  sideLanguages: GithubLanguages
+}
+
+const LANG_COLORS: Record<string, string> = {
+  TypeScript: '#3178c6',
+  JavaScript: '#f1e05a',
+  Python: '#3572A5',
+  Dart: '#00B4AB',
+  Swift: '#F05138',
+  Kotlin: '#A97BFF',
+  Java: '#b07219',
+  Go: '#00ADD8',
+  Rust: '#dea584',
+  CSS: '#563d7c',
+  HTML: '#e34c26',
+  SCSS: '#c6538c',
+  Vue: '#41b883',
+  Shell: '#89e051',
+  Ruby: '#701516',
+  PHP: '#4F5D95',
+  'C#': '#178600',
+  'C++': '#f34b7d',
+  C: '#555555',
+  Dockerfile: '#384d54',
+}
+
+function getLangColor(lang: string) {
+  return LANG_COLORS[lang] ?? '#8b8b8b'
+}
+
+function StacksView({
+  companyLanguages,
+  sideLanguages,
+}: {
+  companyLanguages: GithubLanguages
+  sideLanguages: GithubLanguages
+}) {
+  function toSorted(langs: GithubLanguages) {
+    const total = Object.values(langs).reduce((s, n) => s + n, 0)
+    if (total === 0) return []
+    return Object.entries(langs)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([lang, bytes]) => ({ lang, bytes, pct: Math.round((bytes / total) * 100) }))
+  }
+
+  const company = toSorted(companyLanguages)
+  const side = toSorted(sideLanguages)
+
+  function Section({ title, items }: { title: string; items: ReturnType<typeof toSorted> }) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-5">{title}</h3>
+        {items.length === 0 ? (
+          <p className="text-xs text-gray-400">데이터 없음</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {items.map(({ lang, pct }) => (
+              <div key={lang}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: getLangColor(lang) }}
+                    />
+                    <span className="text-xs font-medium text-gray-800">{lang}</span>
+                  </div>
+                  <span className="text-[11px] text-gray-400 tabular-nums">{pct}%</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${pct}%`, backgroundColor: getLangColor(lang) }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Section title="Company Stack" items={company} />
+      <Section title="Side Project Stack" items={side} />
+    </div>
+  )
 }
 
 function RepoCard({ repo }: { repo: GithubRepo }) {
@@ -48,12 +138,13 @@ function RepoCard({ repo }: { repo: GithubRepo }) {
   )
 }
 
-export default function ProjectsTabs({ companyRepos, sideRepos }: Props) {
-  const [active, setActive] = useState<'company' | 'side'>('company')
+export default function ProjectsTabs({ companyRepos, sideRepos, companyLanguages, sideLanguages }: Props) {
+  const [active, setActive] = useState<'company' | 'side' | 'stacks'>('company')
 
   const tabs = [
     { key: 'company', label: 'Company', count: companyRepos.length },
     { key: 'side', label: 'Side Projects', count: sideRepos.length },
+    { key: 'stacks', label: 'Stacks', count: null },
   ] as const
 
   const repos = active === 'company' ? companyRepos : sideRepos
@@ -73,27 +164,25 @@ export default function ProjectsTabs({ companyRepos, sideRepos }: Props) {
             }`}
           >
             {tab.label}
-            <span className={`ml-2 text-[10px] tabular-nums ${active === tab.key ? 'text-gray-400' : 'text-gray-300'}`}>
-              {tab.count}
-            </span>
+            {tab.count !== null && (
+              <span className={`ml-2 text-[10px] tabular-nums ${active === tab.key ? 'text-gray-400' : 'text-gray-300'}`}>
+                {tab.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* 디자인 프리뷰 버튼 */}
-      <div className="mb-6">
-        <Link
-          href="/design-preview"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
-        >
-          🎨 Design Preview 보기 →
-        </Link>
-      </div>
-
-      {/* 카드 그리드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {repos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
-      </div>
+      {active === 'stacks' ? (
+        <StacksView companyLanguages={companyLanguages} sideLanguages={sideLanguages} />
+      ) : (
+        <>
+          {/* 카드 그리드 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {repos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
+          </div>
+        </>
+      )}
     </div>
   )
 }

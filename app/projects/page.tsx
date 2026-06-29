@@ -1,4 +1,4 @@
-import { fetchUserRepos } from '@/lib/github/api'
+import { fetchUserRepos, fetchRepoLanguages, type GithubLanguages } from '@/lib/github/api'
 import ProjectsTabs from '@/components/portfolio/ProjectsTabs'
 import Link from 'next/link'
 
@@ -50,6 +50,13 @@ const EXCLUDED_REPOS = [
   'dubright_record',
   'vogopang-b2c-app',
   'vogopang_back',
+  'new-dubright',
+  'pickmetoon_teaser',
+  'edu_dobedub',
+  'senior_dobedub',
+  'kid_dobedub',
+  'kids_front',
+  'pickme_teaser_front',
 ]
 
 const SIDE_PROJECTS = [
@@ -64,6 +71,9 @@ const SIDE_PROJECTS = [
   'legal-recorder-hybrid',
   'gomoku_algorithm_test',
   'llm_test',
+  'AX_TEST',
+  'panorama_app',
+  'horror_game',
 ]
 
 export default async function ProjectsPage() {
@@ -84,6 +94,31 @@ export default async function ProjectsPage() {
 
   const sideRepos = repos.filter(r => SIDE_PROJECTS.includes(r.name))
   const companyRepos = repos.filter(r => !SIDE_PROJECTS.includes(r.name))
+
+  // 언어 통계 병렬 fetch (실패한 레포는 무시)
+  async function aggregateLanguages(repoList: typeof repos): Promise<GithubLanguages> {
+    if (!token) return {}
+    const results = await Promise.allSettled(
+      repoList.map(r => fetchRepoLanguages(token, r.full_name))
+    )
+    const totals: GithubLanguages = {}
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        for (const [lang, bytes] of Object.entries(r.value)) {
+          totals[lang] = (totals[lang] ?? 0) + bytes
+        }
+      }
+    }
+    return totals
+  }
+
+  const [companyLanguages, sideLanguages] = await Promise.all([
+    aggregateLanguages(companyRepos),
+    aggregateLanguages(sideRepos),
+  ])
+
+  // 봇파더 기반 자동화 코드라 실제 작성 스택 아님
+  delete companyLanguages['Python']
 
   return (
     <div className="flex flex-col sm:flex-row min-h-screen font-sans">
@@ -122,7 +157,12 @@ export default async function ProjectsPage() {
           {error && <p className="text-sm text-red-400">GitHub API 오류가 발생했습니다.</p>}
 
           {repos.length > 0 && (
-            <ProjectsTabs companyRepos={companyRepos} sideRepos={sideRepos} />
+            <ProjectsTabs
+              companyRepos={companyRepos}
+              sideRepos={sideRepos}
+              companyLanguages={companyLanguages}
+              sideLanguages={sideLanguages}
+            />
           )}
         </div>
       </main>

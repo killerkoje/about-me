@@ -152,6 +152,54 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
       },
     ],
   },
+  harness_build: {
+    description: 'Claude Code 기반 전사 AI 개발 하네스 — 자연어 한 줄로 기획 확인부터 커밋까지 자동 실행',
+    highlights: [
+      '자연어 → TDD 파이프라인 완전 자동화 (기획 확인 → 테스트 선행 → 구현 → 검증 → 패턴 학습)',
+      '10+ 스택 지원 범용 코어 + 스택 플러그인 아키텍처 설계',
+      '기획 레벨 자동 추론 — 키워드 없이 요청 텍스트만으로 mid/high/low 자동 결정',
+      '팀 패턴 학습 시스템 — 커밋 승인 코드에서 패턴 추출 후 .harness/patterns/에 git 공통 자산으로 적재',
+    ],
+    details: [
+      {
+        title: '1. 자연어 → TDD 파이프라인 설계 및 구현',
+        points: [
+          '기획 확인(Phase 1) → 테스트 선행 생성(Phase 1.5) → 레이어 구현(Phase 2) → 테스트 실행 검증(Phase 3) → 패턴 학습(Phase 4.5) 전 파이프라인 자동화',
+          'dev 스킬 오케스트레이터가 각 Phase별 서브 에이전트(code-analyzer, test-writer, implementer, qa-validator, pattern-extractor)를 순차 디스패치',
+          'Phase 3 FAIL 시 implementer 자동 재호출 최대 2회 — QA 통과 확인 후에만 커밋 단계 진입',
+          '커밋 여부는 항상 사용자 확인 후 실행 — 완전 자동 커밋 없음',
+          'harness.config.yaml의 stack: auto 설정 시 package.json / go.mod / pubspec.yaml 등 프로젝트 파일 기반 스택 자동 감지',
+          'install.sh — 신규 프로젝트 초기 설치 / 기존 프로젝트 병합 두 경로 분기 처리',
+        ],
+      },
+      {
+        title: '2. 서브 에이전트 역할 분리',
+        points: [
+          'test-writer — jest / vitest / flutter_test / pytest 등 스택별 테스트 파일 선행 생성 (TDD Red 단계)',
+          'implementer — 스택별 레이어 순서(types → services → hooks → components → app 등)로 구현, 테스트 assertion을 구현 기준으로 사용 (TDD Green)',
+          'qa-validator — 실제 테스트 실행 + 스펙 달성 검증 + 정적 분석 (FAIL 시 implementer 재호출 신호 발생)',
+          'pattern-extractor — 커밋 후 실행, candidates.md SUGGEST 항목에 대한 사용자 승인/거부 인터랙션 포함',
+        ],
+      },
+      {
+        title: '3. 기획 레벨 자동 추론 (Phase 0)',
+        points: [
+          '기존 low: / mid: / high: 키워드 없이 요청 텍스트만으로 기획 복잡도를 자동 추론하는 Phase 0 로직 추가',
+          '명확한 키워드(버튼 추가, 색상 변경 등)는 즉시 low로 결정, 애매한 표현(연동, 리팩터링 등)은 사용자에게 질문',
+          'code-analyzer가 코드베이스 스캔 후 INFERRED_LEVEL을 01_spec.md에 포함, 오케스트레이터가 Phase 0 추론값과 비교해 레벨 보정',
+          '범용 code-analyzer와 Next.js 특화 code-analyzer 양쪽에 INFERRED_LEVEL 출력 스펙 적용',
+        ],
+      },
+      {
+        title: '4. 팀 패턴 학습 시스템',
+        points: [
+          '커밋 승인된 구현 코드에서 hooks / services / types / components / naming 레이어별 반복 결정을 추출해 .harness/patterns/*.yaml에 자동 적재',
+          '신뢰도(user_approved / qa_pass / repeated) × 영향도(텍스트 규칙 vs 코드 생성) 매트릭스로 AUTO / SUGGEST / FLAG / MANUAL 4단계 분류',
+          'repeated만으로는 AUTO 등록 불가 — 나쁜 습관 반복이 팀 패턴으로 굳는 것을 방지',
+        ],
+      },
+    ],
+  },
   dubright_front: {
     description: 'Vue 3 + Pinia 기반 더빙/성우 관리 플랫폼 DubRight 프론트엔드 개발 (2026.04 ~ 2026.06)',
     highlights: [
