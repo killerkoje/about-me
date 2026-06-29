@@ -2,17 +2,48 @@
 
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
 import { EffectComposer, Outline } from '@react-three/postprocessing'
 import { Selection, Select } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
-// ── Sharp 2-step cel-shading gradient ─────────────────────────────────────────
+// ── Reference palette (screenshot-matched) ───────────────────────────────────
+const C = {
+  sky: '#74c4d8',
+  skyHi: '#8ed4e4',
+  cloud: '#eef6fa',
+  road: '#565450',
+  roadLine: '#ece8e0',
+  curb: '#8a8680',
+  grass: '#6a9a58',
+  wall: '#a8a4a0',
+  wallDark: '#8a8682',
+  bush: '#6a8a54',
+  bushHi: '#7a9a64',
+  pole: '#4a4038',
+  wire: '#2a2824',
+  mailbox: '#8a9468',
+  mailboxSlot: '#d8d4c4',
+  house: '#c8c4bc',
+  houseTrim: '#a09888',
+  fence: '#8a6848',
+  window: '#88b8cc',
+  orange: '#e87838',
+  orangeHi: '#f09050',
+  blue: '#4890b8',
+  blueHi: '#60a8c8',
+  yellow: '#e8c838',
+  skin: '#f0c0a0',
+  hair: '#1a1008',
+  pants: '#2a3048',
+  white: '#f4f0e8',
+  outline: '#141210',
+}
+
 let _gm: THREE.DataTexture | null = null
 function getGM(): THREE.DataTexture {
   if (!_gm) {
-    const d = new Uint8Array([48, 255])
-    _gm = new THREE.DataTexture(d, 2, 1, THREE.RedFormat)
+    const d = new Uint8Array([18, 120, 255])
+    _gm = new THREE.DataTexture(d, 3, 1, THREE.RedFormat)
     _gm.magFilter = THREE.NearestFilter
     _gm.minFilter = THREE.NearestFilter
     _gm.needsUpdate = true
@@ -21,404 +52,528 @@ function getGM(): THREE.DataTexture {
 }
 
 type V3 = [number, number, number]
-
-// ── Data ───────────────────────────────────────────────────────────────────────
 type HouseId = 'about' | 'projects' | 'skills' | 'contact'
 
-interface HouseConfig {
+interface ZoneConfig {
   id: HouseId
   label: string
   emoji: string
-  wall: string
-  mid: string
-  roof: string
-  win: string
-  door: string
-  sign: string
   position: V3
+  radius: number
 }
 
-const HOUSES: HouseConfig[] = [
-  { id: 'about',    label: '소개',     emoji: '🏠', wall: '#e2d6c0', mid: '#c8b898', roof: '#a89878', win: '#9ccce8', door: '#5a3e2a', sign: '#7a5c3a', position: [-11, 0, -11] },
-  { id: 'projects', label: '프로젝트', emoji: '💻', wall: '#c8d8e8', mid: '#8aa8c8', roof: '#5a7898', win: '#bce4f8', door: '#283850', sign: '#3a5878', position: [  11, 0, -11] },
-  { id: 'skills',   label: '스킬',     emoji: '⚡', wall: '#c0dcc8', mid: '#80b090', roof: '#508060', win: '#a8e0c8', door: '#284030', sign: '#3a6048', position: [-11, 0,  11] },
-  { id: 'contact',  label: '연락처',   emoji: '📬', wall: '#e8ccd8', mid: '#c898b0', roof: '#987080', win: '#f0c8d8', door: '#5a2840', sign: '#7a4060', position: [  11, 0,  11] },
+const ZONES: ZoneConfig[] = [
+  { id: 'about',    label: '소개',     emoji: '🏠', position: [-2.2, 0, -6],  radius: 4.5 },
+  { id: 'projects', label: '프로젝트', emoji: '💻', position: [3.8, 0, -10], radius: 5 },
+  { id: 'skills',   label: '스킬',     emoji: '⚡', position: [-1.5, 0, -18], radius: 4.5 },
+  { id: 'contact',  label: '연락처',   emoji: '📬', position: [2.5, 0, -26], radius: 5 },
 ]
 
-interface TreeD { pos: V3; s: number }
-const TREES: TreeD[] = [
-  { pos: [-17, 0, -4], s: 1.1 }, { pos: [-17, 0, 4], s: 0.9 },
-  { pos: [17, 0, -4],  s: 1.2 }, { pos: [17, 0, 4],  s: 0.85 },
-  { pos: [-4, 0, -17], s: 1.0 }, { pos: [4, 0, -17], s: 0.95 },
-  { pos: [-4, 0,  17], s: 1.1 }, { pos: [4, 0,  17], s: 0.9 },
-  { pos: [-15, 0, -15], s: 1.3 }, { pos: [15, 0, -15], s: 0.8 },
-  { pos: [-15, 0,  15], s: 1.0 }, { pos: [15, 0,  15], s: 1.1 },
-  { pos: [-5, 0, -5], s: 0.7 },  { pos: [5, 0, -5], s: 0.8 },
-  { pos: [-5, 0,  5], s: 0.75 }, { pos: [5, 0,  5], s: 0.85 },
-]
+function pathX(z: number) {
+  return -Math.sin(z * 0.065) * 1.8
+}
 
-// ── Toon mesh helpers (no BackSide trick — OutlinePass handles it) ─────────────
-function TBox({ w, h, d, color, pos, rot }: { w: number; h: number; d: number; color: string; pos?: V3; rot?: V3 }) {
+function TMesh({
+  geo,
+  color,
+  pos,
+  rot,
+  scale,
+  cast = true,
+}: {
+  geo: React.ReactNode
+  color: string
+  pos?: V3
+  rot?: V3
+  scale?: number | V3
+  cast?: boolean
+}) {
   const gm = getGM()
+  const s = scale ?? 1
+  const scaleProp = Array.isArray(s) ? s : ([s, s, s] as V3)
   return (
-    <mesh position={pos} rotation={rot} castShadow receiveShadow>
-      <boxGeometry args={[w, h, d]} />
+    <mesh position={pos} rotation={rot} scale={scaleProp} castShadow={cast} receiveShadow>
+      {geo}
       <meshToonMaterial color={color} gradientMap={gm} />
     </mesh>
   )
 }
 
-function TCyl({ rt, rb, h, seg = 8, color, pos }: { rt: number; rb: number; h: number; seg?: number; color: string; pos?: V3 }) {
-  const gm = getGM()
-  return (
-    <mesh position={pos} castShadow>
-      <cylinderGeometry args={[rt, rb, h, seg]} />
-      <meshToonMaterial color={color} gradientMap={gm} />
-    </mesh>
-  )
+function TBox(p: { w: number; h: number; d: number; color: string; pos?: V3; rot?: V3; scale?: number | V3 }) {
+  return <TMesh geo={<boxGeometry args={[p.w, p.h, p.d]} />} {...p} />
 }
 
-function TCone({ r, h, seg = 7, color, pos, rot }: { r: number; h: number; seg?: number; color: string; pos?: V3; rot?: V3 }) {
-  const gm = getGM()
-  return (
-    <mesh position={pos} rotation={rot} castShadow>
-      <coneGeometry args={[r, h, seg]} />
-      <meshToonMaterial color={color} gradientMap={gm} />
-    </mesh>
-  )
+function TSphere(p: { r: number; color: string; pos?: V3; seg?: number }) {
+  const seg = p.seg ?? 10
+  return <TMesh geo={<sphereGeometry args={[p.r, seg, seg]} />} color={p.color} pos={p.pos} />
 }
 
-// ── Ground ────────────────────────────────────────────────────────────────────
-function Ground() {
-  const gm = getGM()
+function TCyl(p: { rt: number; rb: number; h: number; color: string; pos?: V3; seg?: number }) {
+  return <TMesh geo={<cylinderGeometry args={[p.rt, p.rb, p.h, p.seg ?? 10]} />} {...p} />
+}
+
+// ── Sky ───────────────────────────────────────────────────────────────────────
+function Sky() {
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[80, 80]} />
-        <meshToonMaterial color="#5aaa3a" gradientMap={gm} />
+      <mesh position={[0, 16, -55]} rotation={[0.06, 0, 0]}>
+        <planeGeometry args={[140, 70]} />
+        <meshBasicMaterial color={C.sky} />
       </mesh>
-      {/* Roads */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <planeGeometry args={[80, 4.5]} />
-        <meshToonMaterial color="#787470" gradientMap={gm} />
+      <mesh position={[0, 8, -55]} rotation={[0.06, 0, 0]}>
+        <planeGeometry args={[140, 40]} />
+        <meshBasicMaterial color={C.skyHi} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <planeGeometry args={[4.5, 80]} />
-        <meshToonMaterial color="#787470" gradientMap={gm} />
-      </mesh>
-      {/* Sidewalks */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
-        <planeGeometry args={[80, 6.5]} />
-        <meshToonMaterial color="#9a9690" gradientMap={gm} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
-        <planeGeometry args={[6.5, 80]} />
-        <meshToonMaterial color="#9a9690" gradientMap={gm} />
-      </mesh>
-      {/* Dashes */}
-      {[-18, -12, -6, 6, 12, 18].map((v, i) => (
-        <mesh key={`h${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[v, 0.02, 0]}>
-          <planeGeometry args={[0.22, 3.2]} />
-          <meshToonMaterial color="#e0d890" gradientMap={gm} />
-        </mesh>
-      ))}
-      {[-18, -12, -6, 6, 12, 18].map((v, i) => (
-        <mesh key={`v${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, v]}>
-          <planeGeometry args={[3.2, 0.22]} />
-          <meshToonMaterial color="#e0d890" gradientMap={gm} />
-        </mesh>
+      {[
+        [-6, 19, -22, 2.8],
+        [5, 21, -28, 3.4],
+        [12, 17, -20, 2.2],
+      ].map(([x, y, z, s], i) => (
+        <group key={i} position={[x, y, z] as V3} scale={s}>
+          <TSphere r={0.55} color={C.cloud} pos={[0, 0, 0]} />
+          <TSphere r={0.42} color={C.cloud} pos={[-0.55, -0.08, 0.1]} />
+          <TSphere r={0.38} color={C.cloud} pos={[0.5, -0.05, -0.05]} />
+        </group>
       ))}
     </group>
   )
 }
 
-// ── Urban building ────────────────────────────────────────────────────────────
-function UrbanBuilding({ cfg }: { cfg: HouseConfig }) {
+// ── Curved road ───────────────────────────────────────────────────────────────
+function Road() {
   const gm = getGM()
-  const [x, , z] = cfg.position
-  const bh = 9
+  const segments = useMemo(() => {
+    const out: { pos: V3; rotY: number }[] = []
+    for (let i = 0; i < 21; i++) {
+      const z = 10 - i * 2.5
+      const x = pathX(z)
+      const x2 = pathX(z - 2.5)
+      out.push({ pos: [x, 0, z], rotY: Math.atan2(x2 - x, -2.5) })
+    }
+    return out
+  }, [])
 
-  const winRows: V3[] = []
-  for (let row = 0; row < 4; row++) {
-    const wy = 1.4 + row * 1.8 + 0.9
-    winRows.push([-1.5, wy, 2.82], [1.5, wy, 2.82])
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, -14]} receiveShadow>
+        <planeGeometry args={[36, 70]} />
+        <meshToonMaterial color={C.grass} gradientMap={gm} />
+      </mesh>
+      {segments.map((seg, i) => (
+        <group key={i} position={seg.pos} rotation={[0, seg.rotY, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -1.25]} receiveShadow>
+            <planeGeometry args={[4.2, 2.6]} />
+            <meshToonMaterial color={C.road} gradientMap={gm} />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2.6, 0.012, -1.25]}>
+            <planeGeometry args={[0.5, 2.6]} />
+            <meshToonMaterial color={C.curb} gradientMap={gm} />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2.6, 0.012, -1.25]}>
+            <planeGeometry args={[0.5, 2.6]} />
+            <meshToonMaterial color={C.curb} gradientMap={gm} />
+          </mesh>
+          {i % 2 === 0 && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, -1.25]}>
+              <planeGeometry args={[0.14, 1.4]} />
+              <meshToonMaterial color={C.roadLine} gradientMap={gm} />
+            </mesh>
+          )}
+        </group>
+      ))}
+    </group>
+  )
+}
+
+// ── Left wall + bushes (reference) ────────────────────────────────────────────
+function LeftWall() {
+  const panels: V3[] = []
+  for (let z = 8; z >= -36; z -= 2.4) {
+    const x = pathX(z) - 4.6
+    panels.push([x, 2.2, z])
   }
 
   return (
-    <group position={[x, 0, z]}>
-      {/* Foundation */}
-      <TBox w={6.2} h={0.3} d={5.4} color="#b0a890" pos={[0, 0.15, 0]} />
-      {/* Main body */}
-      <TBox w={6} h={bh} d={5} color={cfg.wall} pos={[0, bh / 2, 0]} />
-      {/* Mid stripe */}
-      <TBox w={6.1} h={0.28} d={5.1} color={cfg.mid} pos={[0, bh * 0.52, 0]} />
-      {/* Roof slab */}
-      <TBox w={6.3} h={0.45} d={5.3} color={cfg.roof} pos={[0, bh + 0.22, 0]} />
-      {/* Rooftop structures */}
-      <TBox w={2} h={1.1} d={1.4} color="#888880" pos={[-1.4, bh + 0.8, 0.6]} />
-      <TCyl rt={0.1} rb={0.13} h={2.6} seg={8} color="#707068" pos={[1.8, bh + 1.5, 0.8]} />
-      <TBox w={0.5} h={0.45} d={1.2} color="#808878" pos={[0, bh + 0.7, -0.9]} />
-      {/* Windows */}
-      {winRows.map((wp, i) => (
-        <group key={i} position={wp}>
-          <mesh castShadow>
-            <boxGeometry args={[1.05, 1.35, 0.06]} />
-            <meshToonMaterial color={cfg.win} gradientMap={gm} />
-          </mesh>
-          {/* Reflection */}
-          <mesh position={[-0.2, 0.28, 0.04]}>
-            <boxGeometry args={[0.28, 0.5, 0.01]} />
-            <meshBasicMaterial color="#ffffff" transparent opacity={0.35} />
-          </mesh>
+    <group>
+      {panels.map((pos, i) => (
+        <group key={i} position={pos}>
+          <TBox w={2.2} h={4.4} d={0.55} color={C.wall} pos={[0, 0, 0]} />
+          <TBox w={2.22} h={0.08} d={0.56} color={C.wallDark} pos={[0, 0.8, 0.01]} />
+          <TBox w={2.22} h={0.08} d={0.56} color={C.wallDark} pos={[0, -0.6, 0.01]} />
+          {i % 2 === 0 && (
+            <group position={[0.3, 2.5, 0.2]}>
+              <TSphere r={0.55} color={C.bush} pos={[0, 0, 0]} />
+              <TSphere r={0.42} color={C.bushHi} pos={[-0.45, -0.1, 0.15]} />
+              <TSphere r={0.38} color={C.bush} pos={[0.4, -0.05, -0.1]} />
+            </group>
+          )}
         </group>
       ))}
-      {/* Entrance */}
-      <TBox w={1.4} h={2.4} d={0.14} color={cfg.door} pos={[0, 1.2, 2.57]} />
-      <TBox w={1.7} h={0.2} d={0.12} color={cfg.mid} pos={[0, 2.5, 2.56]} />
-      {/* Door handle */}
-      <mesh position={[0.42, 1.15, 2.66]}>
-        <sphereGeometry args={[0.07, 6, 6]} />
-        <meshBasicMaterial color="#d4a820" />
-      </mesh>
-      {/* Signboard */}
-      <TBox w={3.8} h={0.7} d={0.17} color={cfg.sign} pos={[0, 4.1, 2.64]} />
-      {/* Name tag */}
-      <Html position={[0, bh + 2.1, 0]} center distanceFactor={14}>
-        <div style={{
-          background: 'rgba(255,255,255,0.94)',
-          padding: '4px 12px', borderRadius: '8px',
-          fontSize: '12px', fontWeight: 800, color: '#1a1a1a',
-          whiteSpace: 'nowrap', border: '2px solid rgba(0,0,0,0.06)',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-          letterSpacing: '0.05em', pointerEvents: 'none', userSelect: 'none',
-        }}>
-          {cfg.emoji} {cfg.label}
-        </div>
-      </Html>
     </group>
   )
 }
 
-// ── Tree ──────────────────────────────────────────────────────────────────────
-function AniTree({ pos, s }: TreeD) {
-  return (
-    <group position={pos} scale={s}>
-      <TCyl rt={0.14} rb={0.24} h={2} seg={7} color="#5c3a1e" pos={[0, 1, 0]} />
-      <TCone r={1.4} h={2.7} seg={7} color="#226630" pos={[0, 2.85, 0]} />
-      <TCone r={1.05} h={2.2} seg={7} color="#2e8040" pos={[0, 3.85, 0]} />
-      <TCone r={0.68} h={1.8} seg={7} color="#38964c" pos={[0, 4.55, 0]} />
-    </group>
-  )
-}
+// ── Mailbox building (right foreground) ───────────────────────────────────────
+function MailboxWall({ pos }: { pos: V3 }) {
+  const slots: V3[] = []
+  for (let row = 0; row < 6; row++) {
+    for (let col = 0; col < 5; col++) {
+      slots.push([-1.0 + col * 0.5, 0.8 + row * 0.48, 0.46])
+    }
+  }
 
-// ── Utility pole ──────────────────────────────────────────────────────────────
-function Pole({ pos }: { pos: V3 }) {
   return (
     <group position={pos}>
-      <TCyl rt={0.1} rb={0.14} h={7} seg={7} color="#5a4a3a" pos={[0, 3.5, 0]} />
-      <TBox w={1.7} h={0.09} d={0.09} color="#5a4a3a" pos={[0, 6.65, 0]} />
-      <TBox w={1.2} h={0.07} d={0.07} color="#5a4a3a" pos={[0, 6.05, 0]} />
+      <TBox w={3.2} h={4.2} d={1.0} color={C.mailbox} pos={[0, 2.1, 0]} />
+      <TBox w={3.3} h={0.14} d={1.05} color="#6a7450" pos={[0, 4.18, 0]} />
+      {slots.map((p, i) => (
+        <TBox key={i} w={0.38} h={0.34} d={0.06} color={C.mailboxSlot} pos={p} />
+      ))}
     </group>
   )
 }
 
-// ── Player ────────────────────────────────────────────────────────────────────
-function Player({ keysRef, onNear }: { keysRef: React.RefObject<Set<string>>; onNear: (id: HouseId | null) => void }) {
-  const groupRef = useRef<THREE.Group>(null!)
-  const { camera } = useThree()
-  const nearRef = useRef<HouseId | null>(null)
-  const cbRef = useRef(onNear)
-  cbRef.current = onNear
+// ── Background house + fence ──────────────────────────────────────────────────
+function BackgroundHouse({ pos }: { pos: V3 }) {
+  const posts: V3[] = []
+  for (let i = 0; i < 7; i++) posts.push([-1.8 + i * 0.55, 0.55, 1.35])
 
-  useFrame((_, dt) => {
-    const g = groupRef.current
-    if (!g) return
+  return (
+    <group position={pos}>
+      <TBox w={4.5} h={3.8} d={3.2} color={C.house} pos={[0, 1.9, 0]} />
+      <TBox w={4.6} h={0.22} d={3.3} color={C.houseTrim} pos={[0, 3.85, 0]} />
+      <TBox w={4.7} h={0.35} d={3.4} color={C.houseTrim} pos={[0, 4.05, 0]} />
+      <TBox w={0.9} h={0.9} d={0.12} color={C.window} pos={[-1.2, 2.2, 1.62]} />
+      <TBox w={0.9} h={0.9} d={0.12} color={C.window} pos={[1.2, 2.2, 1.62]} />
+      <TBox w={0.7} h={0.55} d={0.35} color="#c8c4bc" pos={[2.1, 2.5, 1.5]} />
+      {posts.map((p, i) => (
+        <TBox key={i} w={0.1} h={1.1} d={0.1} color={C.fence} pos={p} />
+      ))}
+      <TBox w={3.2} h={0.08} d={0.08} color={C.fence} pos={[0, 0.95, 1.38]} />
+      <TBox w={3.2} h={0.08} d={0.08} color={C.fence} pos={[0, 0.7, 1.38]} />
+    </group>
+  )
+}
 
-    const fwd = new THREE.Vector3()
-    camera.getWorldDirection(fwd); fwd.y = 0
-    if (fwd.lengthSq() > 0.001) fwd.normalize()
-    const rgt = new THREE.Vector3(fwd.z, 0, -fwd.x)
+// ── Utility pole + sagging wires ────────────────────────────────────────────
+function PowerLines() {
+  const polePos: V3 = [pathX(-2) - 1.2, 0, -2]
 
-    const k = keysRef.current
-    const dir = new THREE.Vector3()
-    if (k.has('w') || k.has('arrowup'))    dir.addScaledVector(fwd,  1)
-    if (k.has('s') || k.has('arrowdown'))  dir.addScaledVector(fwd, -1)
-    if (k.has('d') || k.has('arrowright')) dir.addScaledVector(rgt,  1)
-    if (k.has('a') || k.has('arrowleft'))  dir.addScaledVector(rgt, -1)
-
-    if (dir.lengthSq() > 0.001) {
-      dir.normalize()
-      g.position.addScaledVector(dir, 8 * dt)
-      g.rotation.y = Math.atan2(dir.x, dir.z)
+  const wires = useMemo(() => {
+    const lines: THREE.Line[] = []
+    const anchors: V3[] = [
+      [polePos[0] - 3, 7.2, polePos[2] - 8],
+      [polePos[0] + 4, 7, polePos[2] - 14],
+      [polePos[0] - 2, 6.8, polePos[2] - 22],
+    ]
+    for (let w = 0; w < 3; w++) {
+      const y0 = 6.8 - w * 0.35
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(polePos[0] + 0.8, y0, polePos[2]),
+        new THREE.Vector3(polePos[0] + 1.5, y0 - 1.2 - w * 0.2, polePos[2] - 10),
+        new THREE.Vector3(anchors[w][0], anchors[w][1], anchors[w][2]),
+      )
+      const pts = curve.getPoints(20)
+      const geo = new THREE.BufferGeometry().setFromPoints(pts)
+      lines.push(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: C.wire, linewidth: 2 })))
     }
-    g.position.x = Math.max(-24, Math.min(24, g.position.x))
-    g.position.z = Math.max(-24, Math.min(24, g.position.z))
+    return lines
+  }, [polePos])
 
-    const tx = g.position.x, tz = g.position.z
-    camera.position.lerp(new THREE.Vector3(tx, 17, tz + 13), Math.min(1, 6 * dt))
-    camera.lookAt(new THREE.Vector3(tx, 1.5, tz))
+  return (
+    <group>
+      <group position={polePos}>
+        <TCyl rt={0.07} rb={0.1} h={7.2} color={C.pole} pos={[0, 3.6, 0]} seg={8} />
+        <TBox w={1.6} h={0.07} d={0.07} color={C.pole} pos={[0, 7.05, 0]} />
+        <TBox w={0.5} h={0.06} d={0.06} color={C.pole} pos={[0.45, 6.7, 0.15]} />
+        <TBox w={0.06} h={0.06} d={0.9} color={C.pole} pos={[0, 6.45, 0.35]} />
+      </group>
+      {wires.map((line, i) => (
+        <primitive key={i} object={line} />
+      ))}
+    </group>
+  )
+}
 
-    let nearest: HouseId | null = null, minD = 6
-    for (const h of HOUSES) {
-      const dx = g.position.x - h.position[0], dz = g.position.z - h.position[2]
-      const d = Math.sqrt(dx * dx + dz * dz)
-      if (d < minD) { minD = d; nearest = h.id }
-    }
-    if (nearest !== nearRef.current) { nearRef.current = nearest; cbRef.current(nearest) }
+// ── Anime characters (reference proportions, from behind) ─────────────────────
+function ChibiCharacter({
+  variant,
+  walkRef,
+}: {
+  variant: 'orange' | 'blue'
+  walkRef: React.RefObject<number>
+}) {
+  const root = useRef<THREE.Group>(null!)
+  const lLeg = useRef<THREE.Group>(null!)
+  const rLeg = useRef<THREE.Group>(null!)
+  const lArm = useRef<THREE.Group>(null!)
+  const rArm = useRef<THREE.Group>(null!)
+
+  const isOrange = variant === 'orange'
+  const top = isOrange ? C.orange : C.blue
+  const topHi = isOrange ? C.orangeHi : C.blueHi
+
+  useFrame(() => {
+    const ph = walkRef.current
+    const swing = Math.sin(ph) * 0.65
+    const bob = Math.abs(Math.sin(ph * 2)) * 0.045
+    if (root.current) root.current.position.y = bob
+    if (lLeg.current) lLeg.current.rotation.x = swing * 0.55
+    if (rLeg.current) rLeg.current.rotation.x = -swing * 0.55
+    if (lArm.current) lArm.current.rotation.x = -swing * 0.35
+    if (rArm.current) rArm.current.rotation.x = swing * 0.35
   })
 
   return (
-    <group ref={groupRef}>
-      {/* Shoes */}
-      <TBox w={0.22} h={0.2} d={0.34} color="#1a1a1a" pos={[-0.15, 0.1, 0.06]} />
-      <TBox w={0.22} h={0.2} d={0.34} color="#1a1a1a" pos={[ 0.15, 0.1, 0.06]} />
-      {/* Pants */}
-      <TBox w={0.25} h={0.78} d={0.25} color="#28356a" pos={[-0.15, 0.58, 0]} />
-      <TBox w={0.25} h={0.78} d={0.25} color="#28356a" pos={[ 0.15, 0.58, 0]} />
-      {/* Jacket */}
-      <TBox w={0.74} h={0.82} d={0.44} color="#d0c8b8" pos={[0, 1.14, 0]} />
-      {/* Collar */}
-      <TBox w={0.36} h={0.16} d={0.36} color="#e8e0d0" pos={[0, 1.58, 0]} />
-      {/* Arms */}
-      <TBox w={0.23} h={0.70} d={0.25} color="#d0c8b8" pos={[-0.49, 1.06, 0]} />
-      <TBox w={0.23} h={0.70} d={0.25} color="#d0c8b8" pos={[ 0.49, 1.06, 0]} />
-      {/* Hands */}
-      <TBox w={0.2} h={0.22} d={0.2} color="#f0c8a0" pos={[-0.49, 0.64, 0]} />
-      <TBox w={0.2} h={0.22} d={0.2} color="#f0c8a0" pos={[ 0.49, 0.64, 0]} />
-      {/* Head */}
-      <TBox w={0.50} h={0.50} d={0.47} color="#f5c8a0" pos={[0, 1.90, 0]} />
-      {/* Hair */}
-      <TBox w={0.52} h={0.24} d={0.49} color="#1a0e08" pos={[0, 2.14, -0.01]} />
-      <TBox w={0.42} h={0.18} d={0.1}  color="#1a0e08" pos={[0, 2.01, 0.24]} />
-      <TBox w={0.1}  h={0.3}  d={0.3}  color="#1a0e08" pos={[-0.27, 1.87, 0.06]} />
-      <TBox w={0.1}  h={0.3}  d={0.3}  color="#1a0e08" pos={[ 0.27, 1.87, 0.06]} />
+    <group ref={root} scale={0.92}>
+      <group ref={lLeg} position={[-0.11, 0.28, 0]}>
+        <TCyl rt={0.09} rb={0.1} h={0.5} color={C.pants} pos={[0, 0, 0]} />
+        <TBox w={0.18} h={0.1} d={0.24} color="#1a1a1a" pos={[0, -0.28, 0.05]} />
+      </group>
+      <group ref={rLeg} position={[0.11, 0.28, 0]}>
+        <TCyl rt={0.09} rb={0.1} h={0.5} color={C.pants} pos={[0, 0, 0]} />
+        <TBox w={0.18} h={0.1} d={0.24} color="#1a1a1a" pos={[0, -0.28, 0.05]} />
+      </group>
+
+      <TSphere r={0.22} color={top} pos={[0, 0.72, 0]} />
+      <TBox w={0.48} h={0.42} d={0.3} color={top} pos={[0, 0.72, -0.02]} />
+      {isOrange && (
+        <>
+          <TBox w={0.5} h={0.18} d={0.32} color={topHi} pos={[0, 0.95, -0.06]} />
+          <TBox w={0.08} h={0.08} d={0.42} color={C.white} pos={[-0.24, 1.12, 0.02]} />
+          <TBox w={0.08} h={0.08} d={0.42} color={C.white} pos={[0.24, 1.12, 0.02]} />
+          <TBox w={0.44} h={0.07} d={0.1} color={C.white} pos={[0, 1.2, 0.04]} />
+        </>
+      )}
+      {!isOrange && (
+        <>
+          <TBox w={0.44} h={0.1} d={0.28} color={topHi} pos={[0, 0.92, -0.04]} />
+          <TBox w={0.12} h={0.34} d={0.08} color={C.yellow} pos={[0.22, 0.7, 0.08]} rot={[0.2, -0.3, 0.5]} />
+          <TBox w={0.28} h={0.32} d={0.14} color={C.yellow} pos={[0.18, 0.55, 0.12]} rot={[0.1, -0.2, 0.3]} />
+        </>
+      )}
+
+      <group ref={lArm} position={[-0.28, 0.78, 0]}>
+        <TCyl rt={0.06} rb={0.07} h={0.38} color={top} pos={[0, -0.08, 0]} />
+      </group>
+      <group ref={rArm} position={[0.28, 0.78, 0]}>
+        <TCyl rt={0.06} rb={0.07} h={0.38} color={top} pos={[0, -0.08, 0]} />
+      </group>
+
+      <TSphere r={0.2} color={C.skin} pos={[0, 1.12, 0.02]} />
+      <TSphere r={0.21} color={C.hair} pos={[0, 1.22, -0.04]} />
+      <TBox w={0.34} h={0.12} d={0.08} color={C.hair} pos={[0, 1.14, 0.12]} />
     </group>
   )
 }
 
-// ── Main 3D scene ─────────────────────────────────────────────────────────────
-function VillageScene({ onNear }: { onNear: (id: HouseId | null) => void }) {
+function PlayerParty({ keysRef, onNear }: { keysRef: React.RefObject<Set<string>>; onNear: (id: HouseId | null) => void }) {
+  const party = useRef<THREE.Group>(null!)
+  const orangeWalk = useRef(0)
+  const blueWalk = useRef(0.8)
+  const nearRef = useRef<HouseId | null>(null)
+  const cbRef = useRef(onNear)
+  cbRef.current = onNear
+  const { camera } = useThree()
+
+  useFrame((_, dt) => {
+    const g = party.current
+    if (!g) return
+
+    const k = keysRef.current
+    const dir = new THREE.Vector3()
+    if (k.has('w') || k.has('arrowup')) dir.z -= 1
+    if (k.has('s') || k.has('arrowdown')) dir.z += 1
+    if (k.has('a') || k.has('arrowleft')) dir.x -= 1
+    if (k.has('d') || k.has('arrowright')) dir.x += 1
+
+    if (dir.lengthSq() > 0.001) {
+      dir.normalize()
+      g.position.addScaledVector(dir, 4.8 * dt)
+      const targetRot = Math.atan2(dir.x, dir.z)
+      g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, targetRot, Math.min(1, 8 * dt))
+      orangeWalk.current += dt * 10
+      blueWalk.current += dt * 10
+    }
+
+    const laneX = pathX(g.position.z)
+    g.position.x = THREE.MathUtils.lerp(
+      g.position.x,
+      THREE.MathUtils.clamp(g.position.x, laneX - 1.3, laneX + 1.3),
+      0.1,
+    )
+    g.position.z = THREE.MathUtils.clamp(g.position.z, -34, 4)
+
+    const look = new THREE.Vector3(g.position.x, 1.05, g.position.z - 3)
+    const cam = new THREE.Vector3(g.position.x + 0.35, 2.35, g.position.z + 4.6)
+    camera.position.lerp(cam, Math.min(1, 3 * dt))
+    camera.lookAt(look)
+
+    let nearest: HouseId | null = null
+    let minD = Infinity
+    for (const z of ZONES) {
+      const dx = g.position.x - z.position[0]
+      const dz = g.position.z - z.position[2]
+      const d = Math.sqrt(dx * dx + dz * dz)
+      if (d < z.radius && d < minD) { minD = d; nearest = z.id }
+    }
+    if (nearest !== nearRef.current) {
+      nearRef.current = nearest
+      cbRef.current(nearest)
+    }
+  })
+
+  return (
+    <group ref={party} position={[pathX(2), 0, 2]} rotation={[0, Math.PI, 0]}>
+      <group position={[-0.55, 0, 0]}>
+        <ChibiCharacter variant="orange" walkRef={orangeWalk} />
+      </group>
+      <group position={[0.55, 0, 0.15]}>
+        <ChibiCharacter variant="blue" walkRef={blueWalk} />
+      </group>
+    </group>
+  )
+}
+
+function AlleyScene({ onNear }: { onNear: (id: HouseId | null) => void }) {
   const keysRef = useRef<Set<string>>(new Set())
+
   useEffect(() => {
     const dn = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase())
     const up = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase())
-    window.addEventListener('keydown', dn); window.addEventListener('keyup', up)
-    return () => { window.removeEventListener('keydown', dn); window.removeEventListener('keyup', up) }
+    window.addEventListener('keydown', dn)
+    window.addEventListener('keyup', up)
+    return () => {
+      window.removeEventListener('keydown', dn)
+      window.removeEventListener('keyup', up)
+    }
   }, [])
-
-  const polePositions: V3[] = [[-7, 0, -7], [7, 0, -7], [-7, 0, 7], [7, 0, 7]]
 
   return (
     <>
-      {/* Lighting: warm sun + cool fill → anime color temperature */}
-      <ambientLight intensity={0.55} color="#b8ccee" />
-      <directionalLight position={[10, 22, 8]} intensity={2.4} color="#fff2c0" castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-near={0.5} shadow-camera-far={80}
-        shadow-camera-left={-28} shadow-camera-right={28}
-        shadow-camera-top={28} shadow-camera-bottom={-28}
+      <ambientLight intensity={0.62} color="#c8dce8" />
+      <directionalLight
+        position={[8, 20, 12]}
+        intensity={2.6}
+        color="#fff4d0"
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-bias={-0.0004}
+        shadow-camera-near={0.5}
+        shadow-camera-far={60}
+        shadow-camera-left={-16}
+        shadow-camera-right={16}
+        shadow-camera-top={16}
+        shadow-camera-bottom={-16}
       />
-      <directionalLight position={[-5, 8, -14]} intensity={0.3} color="#a0c8f8" />
+      <directionalLight position={[-6, 8, -6]} intensity={0.28} color="#90b8d8" />
 
-      {/* Sky gradient illusion: big backdrop plane */}
-      <mesh position={[0, 20, -50]} rotation={[0.1, 0, 0]}>
-        <planeGeometry args={[200, 60]} />
-        <meshBasicMaterial color="#5ab8d8" />
-      </mesh>
-      <mesh position={[0, 8, -50]} rotation={[0.1, 0, 0]}>
-        <planeGeometry args={[200, 30]} />
-        <meshBasicMaterial color="#78d0e8" />
-      </mesh>
+      <Sky />
 
       <Selection>
         <EffectComposer multisampling={4} autoClear={false}>
           <Outline
-            visibleEdgeColor={0x0d0d14}
-            hiddenEdgeColor={0x0d0d14}
-            edgeStrength={8}
-            width={900}
+            visibleEdgeColor={0x141210}
+            hiddenEdgeColor={0x141210}
+            edgeStrength={12}
+            width={1024}
             blur={false}
+            xRay={false}
           />
         </EffectComposer>
 
         <Select enabled>
-          <Ground />
-          {HOUSES.map(h => <UrbanBuilding key={h.id} cfg={h} />)}
-          {TREES.map((t, i) => <AniTree key={i} {...t} />)}
-          {polePositions.map((p, i) => <Pole key={i} pos={p} />)}
-          <Player keysRef={keysRef} onNear={onNear} />
+          <Road />
+          <LeftWall />
+          <MailboxWall pos={[pathX(-8) + 5.2, 0, -8]} />
+          <BackgroundHouse pos={[pathX(-20) + 5.8, 0, -20]} />
+          <PowerLines />
+          <PlayerParty keysRef={keysRef} onNear={onNear} />
         </Select>
       </Selection>
     </>
   )
 }
 
-// ── Modal content ─────────────────────────────────────────────────────────────
+// ── Modals ────────────────────────────────────────────────────────────────────
 const S = {
   tag: { fontSize: '10px', color: '#aaa', letterSpacing: '0.2em', textTransform: 'uppercase' as const, fontFamily: 'sans-serif', marginBottom: '10px' },
-  h2:  { fontSize: '28px', fontWeight: 800, color: '#111', margin: '0 0 4px' as const },
+  h2: { fontSize: '28px', fontWeight: 800, color: '#111', margin: '0 0 4px' as const },
   sub: { fontSize: '13px', color: '#999', marginBottom: '22px' },
 }
+
 function AboutContent() {
-  return <>
-    <p style={S.tag}>🏠 소개</p><h2 style={S.h2}>이희원</h2><p style={S.sub}>Frontend Developer</p>
-    <p style={{ fontSize: '14px', lineHeight: '2.1', color: '#555', whiteSpace: 'pre-line' }}>{'제가 만든 서비스에 접속하는 누구나\n설명없이 간편하고 쉽게 이용할 수 있습니다.\n끊임없이 아이디어를 내고 설명이 필요없고\n간편하며 임팩트 있는 서비스를 구성하는\n개발자를 꿈꾸고 있습니다.'}</p>
-  </>
+  return (
+    <>
+      <p style={S.tag}>🏠 소개</p>
+      <h2 style={S.h2}>이희원</h2>
+      <p style={S.sub}>Frontend Developer</p>
+      <p style={{ fontSize: '14px', lineHeight: '2.1', color: '#555', whiteSpace: 'pre-line' }}>
+        {'제가 만든 서비스에 접속하는 누구나\n설명없이 간편하고 쉽게 이용할 수 있습니다.'}
+      </p>
+    </>
+  )
 }
+
 function ProjectsContent({ close }: { close: () => void }) {
-  return <>
-    <p style={S.tag}>💻 프로젝트</p><h2 style={S.h2}>Projects</h2><p style={S.sub}>만들어온 것들</p>
-    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
-      {['보고팡 프론트엔드', '픽미툰', '두브라이트', '도베덥 교육 플랫폼', '이 포트폴리오'].map((s, i) => (
-        <li key={i} style={{ padding: '11px 0', borderBottom: '1px solid #f0f0f0', fontSize: '14px', color: '#333', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ color: '#ddd', fontSize: '8px' }}>●</span>{s}
-        </li>
-      ))}
-    </ul>
-    <a href="/projects" onClick={close} style={{ display: 'inline-flex', alignItems: 'center', background: '#111', color: 'white', borderRadius: '14px', padding: '11px 22px', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>전체 프로젝트 보기 →</a>
-  </>
+  return (
+    <>
+      <p style={S.tag}>💻 프로젝트</p>
+      <h2 style={S.h2}>Projects</h2>
+      <a href="/projects" onClick={close} style={{ display: 'inline-flex', background: '#111', color: 'white', borderRadius: '14px', padding: '11px 22px', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+        전체 프로젝트 보기 →
+      </a>
+    </>
+  )
 }
+
 function SkillsContent() {
-  return <>
-    <p style={S.tag}>⚡ 스킬</p><h2 style={S.h2}>기술 스택</h2><p style={S.sub}>주로 쓰는 기술들</p>
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-      {['React / Next.js', 'TypeScript', 'Vue.js', 'Three.js / R3F', 'Tailwind CSS', 'Supabase', 'Node.js'].map((s, i) => (
-        <span key={i} style={{ background: '#f7f7f7', border: '1.5px solid #ebebeb', borderRadius: '20px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: '#333' }}>{s}</span>
-      ))}
-    </div>
-  </>
+  return (
+    <>
+      <p style={S.tag}>⚡ 스킬</p>
+      <h2 style={S.h2}>기술 스택</h2>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+        {['React / Next.js', 'TypeScript', 'Three.js / R3F', 'Tailwind CSS'].map((s) => (
+          <span key={s} style={{ background: '#f7f7f7', border: '1.5px solid #ebebeb', borderRadius: '20px', padding: '8px 16px', fontSize: '13px', fontWeight: 600 }}>{s}</span>
+        ))}
+      </div>
+    </>
+  )
 }
+
 function ContactContent() {
-  return <>
-    <p style={S.tag}>📬 연락처</p><h2 style={S.h2}>연락하기</h2><p style={S.sub}>언제든지 환영입니다</p>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {[{ label: '🐙 GitHub', url: 'https://github.com/LEEHEEWON123', desc: 'LEEHEEWON123' }, { label: '💼 LinkedIn', url: 'https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/', desc: '희원 이' }].map((l, i) => (
-        <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', border: '1.5px solid #eee', borderRadius: '16px', textDecoration: 'none', color: '#333', fontSize: '14px', fontWeight: 600 }}>
-          <span>{l.label}</span><span style={{ fontSize: '12px', color: '#bbb' }}>{l.desc} →</span>
-        </a>
-      ))}
-    </div>
-  </>
+  return (
+    <>
+      <p style={S.tag}>📬 연락처</p>
+      <h2 style={S.h2}>연락하기</h2>
+      <a href="https://github.com/LEEHEEWON123" target="_blank" rel="noreferrer" style={{ color: '#333', fontWeight: 600 }}>GitHub →</a>
+    </>
+  )
 }
+
 function Modal({ id, close }: { id: HouseId; close: () => void }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,15,25,0.62)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, backdropFilter: 'blur(7px)', padding: '20px' }} onClick={close}>
-      <div style={{ background: 'white', borderRadius: '24px', padding: '40px 44px', maxWidth: '480px', width: '100%', maxHeight: '82vh', overflowY: 'auto', boxShadow: '0 30px 90px rgba(0,0,0,0.25)', position: 'relative' }} onClick={e => e.stopPropagation()}>
-        <button onClick={close} style={{ position: 'absolute', top: '18px', right: '18px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#bbb' }}>✕</button>
-        {id === 'about'    && <AboutContent />}
+      <div style={{ background: 'white', borderRadius: '24px', padding: '40px 44px', maxWidth: '480px', width: '100%', position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+        <button type="button" onClick={close} style={{ position: 'absolute', top: 18, right: 18, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#bbb' }}>✕</button>
+        {id === 'about' && <AboutContent />}
         {id === 'projects' && <ProjectsContent close={close} />}
-        {id === 'skills'   && <SkillsContent />}
-        {id === 'contact'  && <ContactContent />}
+        {id === 'skills' && <SkillsContent />}
+        {id === 'contact' && <ContactContent />}
       </div>
     </div>
   )
 }
 
-// ── Export ────────────────────────────────────────────────────────────────────
 export default function VillageWorld() {
   const [near, setNear] = useState<HouseId | null>(null)
   const [open, setOpen] = useState<HouseId | null>(null)
+  const [dpr, setDpr] = useState(1)
   const handleNear = useCallback((id: HouseId | null) => setNear(id), [])
+
+  useEffect(() => {
+    setDpr(Math.min(window.devicePixelRatio || 1, 1.5))
+  }, [])
 
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
@@ -429,27 +584,29 @@ export default function VillageWorld() {
     return () => window.removeEventListener('keydown', fn)
   }, [near, open])
 
-  const nearCfg = HOUSES.find(h => h.id === near)
+  const nearCfg = ZONES.find((z) => z.id === near)
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
-      <Canvas camera={{ position: [0, 17, 13], fov: 58 }} gl={{ antialias: true, powerPreference: 'high-performance' }} shadows>
-        <color attach="background" args={['#78c8e0']} />
-        <fog attach="fog" args={['#78c8e0', 32, 78]} />
-        <VillageScene onNear={handleNear} />
+      <Canvas
+        camera={{ position: [0.35, 2.35, 6.6], fov: 58 }}
+        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        shadows
+        dpr={dpr}
+      >
+        <color attach="background" args={[C.sky]} />
+        <fog attach="fog" args={[C.sky, 22, 58]} />
+        <AlleyScene onNear={handleNear} />
       </Canvas>
 
-      <a href="/" style={{ position: 'fixed', top: 20, left: 20, background: 'rgba(255,255,255,0.92)', padding: '8px 18px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, color: '#222', textDecoration: 'none', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 2px 14px rgba(0,0,0,0.1)', zIndex: 100 }}>← 돌아가기</a>
-      <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.92)', padding: '8px 22px', borderRadius: '20px', fontSize: '12px', fontWeight: 800, color: '#1a1a1a', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 2px 14px rgba(0,0,0,0.08)', zIndex: 100, letterSpacing: '0.1em', pointerEvents: 'none', whiteSpace: 'nowrap' }}>이희원의 마을</div>
-      <div style={{ position: 'fixed', bottom: 20, right: 20, background: 'rgba(255,255,255,0.88)', padding: '12px 16px', borderRadius: '16px', fontSize: '11px', color: '#666', backdropFilter: 'blur(10px)', lineHeight: '1.9', zIndex: 100, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', userSelect: 'none' }}>
-        <strong style={{ display: 'block', marginBottom: '3px', color: '#333' }}>조작법</strong>
-        WASD / 방향키 — 이동<br />건물 근처에서 E — 들어가기<br />ESC — 닫기
-      </div>
+      <a href="/" style={{ position: 'fixed', top: 20, left: 20, background: 'rgba(255,255,255,0.9)', padding: '8px 18px', borderRadius: 20, fontSize: 12, fontWeight: 700, color: '#222', textDecoration: 'none', zIndex: 100 }}>
+        ← 돌아가기
+      </a>
 
       {nearCfg && !open && (
-        <div style={{ position: 'fixed', bottom: 76, left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
-          <button onClick={() => setOpen(nearCfg.id)} style={{ background: 'rgba(255,255,255,0.96)', border: '2.5px solid rgba(0,0,0,0.14)', borderRadius: '28px', padding: '12px 30px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', backdropFilter: 'blur(10px)', letterSpacing: '0.06em', color: '#111', boxShadow: '0 6px 28px rgba(0,0,0,0.15)' }}>
-            {nearCfg.emoji} {nearCfg.label} 들어가기 <span style={{ opacity: 0.4, fontSize: '10px', marginLeft: '4px' }}>[E]</span>
+        <div style={{ position: 'fixed', bottom: 48, left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
+          <button type="button" onClick={() => setOpen(nearCfg.id)} style={{ background: 'rgba(255,255,255,0.96)', border: '2px solid rgba(0,0,0,0.12)', borderRadius: 28, padding: '12px 28px', fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }}>
+            {nearCfg.emoji} {nearCfg.label} [E]
           </button>
         </div>
       )}
