@@ -409,7 +409,7 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
       },
     ],
   },
-  'web-vital-checking': {
+  'web-vital-cheking': {
     description:
       'web-vital-kit — "웹 바이탈 구축해줘" 한 마디로 Next/React/Vue/Nuxt에 Core Web Vitals 수집·대시보드·Lighthouse 파이프라인을 자동 구축하는 CLI 툴킷',
     highlights: [
