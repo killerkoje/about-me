@@ -77,6 +77,7 @@ const SIDE_PROJECTS = [
   'horror_game',
   'kakao_mcp_gift_find',
   'kakao_mcp_server',
+  'web-vital-checking',
 ]
 
 export default async function ProjectsPage() {

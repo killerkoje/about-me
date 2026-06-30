@@ -409,4 +409,73 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
       },
     ],
   },
+  'web-vital-checking': {
+    description:
+      'web-vital-kit — "웹 바이탈 구축해줘" 한 마디로 Next/React/Vue/Nuxt에 Core Web Vitals 수집·대시보드·Lighthouse 파이프라인을 자동 구축하는 CLI 툴킷',
+    highlights: [
+      'AGENTS.md + Cursor Rule + Skill 3중 AI 가이드 → npx web-vital-kit init 자연어 트리거',
+      'Next.js / React(Vite) / Vue(Vite) / Nuxt 프레임워크 자동 감지 + 템플릿 일괄 설치',
+      '폴더 라우팅 = 도메인 — 1뎁스 폴더 추가 시 설정 변경 없이 자동 등록·도메인별 ndjson 로그',
+      'Google web-vitals v5 공식 라이브러리 기반 — LCP·INP·CLS 필드 데이터 + Lighthouse 합성 측정 분리',
+    ],
+    details: [
+      {
+        title: '1. 자연어 → Web Vitals 자동 구축 파이프라인',
+        points: [
+          '"웹 바이탈 구축해줘" 한 마디로 Cursor / Claude가 설치 플로우 진입',
+          'AGENTS.md + Cursor Rule (.cursor/rules/web-vital-kit.mdc) + Skill (skills/install-web-vitals/) 3중 AI 가이드 — 자연어 트리거 → npx web-vital-kit init 실행까지 연결',
+          'CLI web-vital-kit init — 프레임워크 자동 감지 → 템플릿 복사 → package.json / .gitignore / 진입점 패치까지 일괄 처리',
+          '--dry-run / --force / --cwd / --framework 옵션으로 신규·기존 프로젝트 모두 대응',
+          '설치 후 사용자가 yarn dev로 직접 검증 — 완전 무인 배포 없음, 대시보드(/web-vital/dashboard)에서 수집 확인',
+        ],
+      },
+      {
+        title: '2. 프레임워크별 서브 모듈 분리',
+        points: [
+          'detect-framework.mjs — package.json·설정 파일 기반으로 Next / React / Vue / Nuxt 자동 감지',
+          'nextjs-app-router 템플릿 — Route Handler API + app-routes.ts 스캐너 + layout.tsx WebVitalsInitializer 패치',
+          'react-vite / vue-vite 템플릿 — Vite plugin API 미들웨어 + src/pages/ 스캐너 + main.tsx 패치',
+          'nuxt 템플릿 — Nitro server/routes/web-vital/api + pages/ 스캐너 + client plugin',
+          'route-scanner-pages.mjs — React/Vue/Nuxt 공통 pages/ 폴더 라우팅 → URL·도메인 변환',
+          'vite-plugin-web-vital.mjs — Vite dev server에 /web-vital/api 인라인 주입 (별도 프로세스 불필요)',
+          'Lighthouse 스크립트 — Slow 4G / Fast 4G / No throttling 3종 네트워크 프로필 합성 측정',
+        ],
+      },
+      {
+        title: '3. 도메인 자동 추적 (핵심 차별점)',
+        points: [
+          '폴더 라우팅 = 도메인 — app/series/, pages/alarm/, pages/my-voice/ 등 1뎁스 폴더 추가 시 설정 변경 없이 자동 등록',
+          'GET /web-vital/api/domains — 매 요청마다 파일시스템 재스캔, 신규 도메인 즉시 반영',
+          '동적 라우트 지원 — /series/[id], /series/[...slug] 등 패턴 매칭 후 도메인 /series로 그룹핑',
+          'dev 로그 도메인별 분리 — src/web-vital-logs/series/, my-voice/ 등 폴더 단위 ndjson 저장',
+          '대시보드 도메인 필터 — 도메인 → 페이지 → 기기 3단 필터 + 자동 스캔 뱃지 UI',
+        ],
+      },
+      {
+        title: '4. Google 공식 지표 기반 측정 신뢰도',
+        points: [
+          '수집 라이브러리: Google web-vitals v5 (Chrome 팀 공식) — 자체 산식 없음',
+          'Core Web Vitals: LCP · INP · CLS — Google Search Central 임계값 그대로 rating 산출',
+          '참고 지표: TTFB — 동일 라이브러리로 수집, 서버·네트워크 튜닝용',
+          '등급: good / needs-improvement / poor — Google 기준값 미변형',
+          'Lighthouse CLI — FCP · LCP · TBT · Speed Index 등 합성 지표 (Chrome 공식)',
+          '필드 데이터(실사용자)와 합성 데이터(Lighthouse) 역할 분리 — 대시보드/API/dev 로그는 필드 데이터 단일 원천',
+        ],
+      },
+      {
+        title: '5. 설치 산출물 구조 (프레임워크별)',
+        points: [
+          '공통 라우트 prefix: /web-vital (dashboard · api · api/domains · api/routes)',
+          'docs/vitals/ — Core Web Vitals 베이스라인 문서',
+          'scripts/ — Lighthouse 네트워크 프로필 측정',
+          '.cursor/rules/web-vital-kit.mdc — Cursor 자연어 트리거',
+          'Next.js → src/app/web-vital/ + layout.tsx 패치',
+          'React/Vue → src/web-vital/ + web-vital-kit/ Vite plugin + vite.config 패치',
+          'Nuxt → pages/web-vital/ + server/routes/web-vital/api/ + plugins/web-vitals.client.ts',
+          '기술 스택: Claude Code · Cursor · Node.js ESM · TypeScript · Google web-vitals · Lighthouse CLI',
+          '지원 스택: Next.js · React (Vite) · Vue (Vite) · Nuxt — 프레임워크 자동 감지 + --framework 수동 지정',
+        ],
+      },
+    ],
+  },
 }
