@@ -283,4 +283,78 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
       },
     ],
   },
+  horror_game: {
+    description:
+      'Unity WebGL 1인칭 공포 게임 — 8개 런타임 생성 맵·차원 포털 로그라이크 루프·WebGL 전용 에셋 레지스트리·GitHub Actions 자동 배포까지 1인 end-to-end 구현',
+    highlights: [
+      'Android 2.5D MVP에서 WebGL 1인칭 공포로 피벗 — 포털 기반 아케이드형 런 구조',
+      '11 씬 · 8개 procedural map · 6+ entity type · ~675MB WebGL build',
+      'HorrorAssetRegistry + URP 머티리얼 베이크로 에디터/WebGL 이중 로드 계층 분리',
+      'GitHub Actions(Unity 6) → WebGL 빌드 → Netlify 프로덕션 자동 배포',
+    ],
+    details: [
+      {
+        title: '1. 게임 루프 & 차원 포털 시스템',
+        points: [
+          'Android 2.5D MVP(열쇠·자물쇠 탈출)에서 브라우저 WebGL 1인칭 공포로 피벗 — 포털만으로 진행하는 아케이드형 런 구조',
+          'Map_00 프롤로그(도시 낙하) → 8개 랜덤 차원 맵(Map_01~08) → 귀환 맵 도달 시 Map_Reality 탈출 엔딩',
+          'DimensionMapPool + GameManager로 현재 맵 제외 랜덤 선택, 귀환 맵(_returnMapScene) 추적, 사망 시 Map_00 리셋',
+          'DimensionPortal — 플레이어 끌어당김 + FOV 확대 + 몬스터 일시정지 + 사운드 시퀀스 후 씬 전환',
+          'DimensionWakeSequence — 차원 진입 시 누워 있다 일어나는 1인칭 연출, noclip 진입(NoclipEntryState) 지원',
+          'DimensionPortalVisuals — 포털 링·코어·파티클·조명·험(hum) 오디오, 귀환/차원 포털 색상 팔레트 분기',
+        ],
+      },
+      {
+        title: '2. 런타임 맵 생성 (Bootstrap + MapBuilder)',
+        points: [
+          '씬마다 MapXXBootstrap → XXMapBuilder.Build() → 레이아웃·플레이어·포털·NavMesh·몬스터 스폰을 Awake 시점에 조립',
+          'Map_01 Backrooms(BackroomsMapBuilder) · Map_02 지하 주차장(ParkingGarageMapBuilder) · Map_03 Sponza 미로(SponzaMazeMapBuilder) · Map_04 Prototype(PrototypeMapMapBuilder)',
+          'Map_05 NYC 도시(NycCityMapBuilder) · Map_06 다층 인테리어(InteriorsAMapBuilder) · Map_07 Backrooms-like(BackroomsLikeMapBuilder) · Map_08 터널 추격전(TunnelMapBuilder)',
+          'MazeGenerator + 시드 기반 벽 배치, NavMeshBaker / NavMeshWallCarver로 런타임 NavMesh 구성',
+          '맵별 Atmosphere 클래스 — 안개·조명·사운드(예: TunnelAtmosphere 공습 사이렌 2D+3D)',
+        ],
+      },
+      {
+        title: '3. 몬스터 AI & 엔티티 비주얼',
+        points: [
+          'MonsterAI — Idle → Patrol → Chase → Search 상태 머신, NavMeshAgent 추적, 시야(MonsterVision) + Raycast 차단',
+          '포털/기상/포획 시 PauseAllForWake / PauseAllForCatch로 전역 AI 일시정지',
+          '맵별 전용 엔티티 + Map08 전 타입 동시 추격(Map08ChaseSpawner): Mutant, ZombieMale, Pumpkin, Priest, Insurgent, Smiler(텍스처 기반)',
+          '*VisualSetup 클래스 — 에디터 AssetDatabase / WebGL HorrorAssetRegistry 이중 로드, URP 머티리얼·텍스처 런타임 적용',
+          'MaterialURPFixer — HDRP/Built-in/Shader Graph 에셋을 URP Lit으로 변환, WebGL 핑크 머티리얼 방지',
+        ],
+      },
+      {
+        title: '4. WebGL 배포 파이프라인',
+        points: [
+          'HorrorAssetRegistry — Resources/ 중앙 ScriptableObject, AssetDatabase 없는 WebGL에서 프리팹·머티리얼·텍스처·애니메이터·오디오 일괄 로드',
+          'HorrorAssetRegistryBuilder — 에디터 메뉴로 레지스트리 자동 생성, NYC/Tunnel URP 머티리얼 프리베이크 → BakedMaterialLookup',
+          'WebGLBuild — itch.io(200MB 한도, 텍스처 half-res) / Netlify(풀 품질) 듀얼 빌드 프로파일',
+          'WebGLPrefabLinker — 8개 맵 씬 Bootstrap ↔ 프리팹 자동 연결',
+          'GitHub Actions(game-ci/unity-builder Unity 6) → WebGL 빌드 → Netlify 프로덕션 배포',
+          'deploy-netlify.sh — draft 업로드 후 restoreSiteDeploy API로 프로덕션 승격 (CLI --prod Forbidden 우회)',
+        ],
+      },
+      {
+        title: '5. 플레이어 & UX',
+        points: [
+          '1인칭 FirstPersonCamera + 가상 조이스틱(WebGL 터치), SensitivitySettingsUI로 감도 저장',
+          'PlayerHuntedAudio / PlayerBreathAudioSetup — 추격·호흡 SFX, HorrorScreenEffects·HorrorFilmGrain 공포 연출',
+          'SceneTransitioner — 페이드 전환, 차원/현실/노클립 진입 모드 분기',
+          'MainMenu → 새 런 시작, 목숨·맵 상태는 디스크 저장 없음(세션 아케이드)',
+        ],
+      },
+      {
+        title: '6. 개발 방식 (Claude Code + Superpowers)',
+        points: [
+          'superpowers 스킬(TDD, systematic-debugging, writing-plans) 기반 맵 → 엔티티 → 텍스처 반복 개발',
+          '에디터/WebGL 동작 차이를 레지스트리·머티리얼 베이크·런타임 로더로 계층 분리해 해결',
+          '미사용 서드파티 에셋 ~1.3GB GUID 교차참조 검증 후 제거 — 프로젝트/CI 임포트 부담 절감',
+          'Tech Stack: Unity 6000.4.10f1 · URP · WebGL · NavMesh AI · GitHub Actions · Netlify',
+          'Scale: 11 씬 · 8 procedurally assembled maps · 6+ entity types · ~675MB WebGL build',
+          'Role: 기획·설계·Unity C# 구현·WebGL 파이프라인·CI/CD 전부 1인',
+        ],
+      },
+    ],
+  },
 }
