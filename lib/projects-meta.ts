@@ -357,4 +357,56 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
       },
     ],
   },
+  'village-run': {
+    description:
+      'GPS 러닝 땅따먹기 앱 — Shoelace 영역 계산·Flutter 네이버맵 실시간 오버레이·Supabase PostGIS 누적 점령·공유 웹까지 1인 end-to-end 구현',
+    highlights: [
+      'Shoelace 공식(구면 근사) + 경로 법선 5m 버퍼 폴리곤으로 실제 점령 면적 산출',
+      'flutter_naver_map 다크 네온 UI — 실시간 폴리곤·경로·bearing 카메라 추적',
+      'Supabase PostGIS ST_Union 누적 영역 + Firebase Hosting Leaflet 공유 웹',
+      'TDD 기반 TerritoryCalculator·TrackingService 유닛 테스트',
+    ],
+    details: [
+      {
+        title: '1. GPS 영역 계산 엔진 설계 및 구현',
+        points: [
+          '시작점 20m 이내 복귀 시 루프로 판정 → Shoelace 공식(구면 근사)으로 내부 폴리곤 면적 계산',
+          '직선 경로는 경로 법선 방향으로 좌우 5m 버퍼 폴리곤 생성 → 실제 폴리곤 면적으로 점령 면적 산출 (직사각형 근사 아님)',
+          '계산 결과를 GeoJSON Polygon으로 출력 → 앱 지도 오버레이·Supabase PostGIS·공유 웹 Leaflet에서 동일 포맷 재사용',
+          'TerritoryCalculator / TrackingService 분리 — 영역 계산(순수 로직)과 GPS 스트림 수집(플랫폼 의존) 레이어 분리',
+          'GPS 노이즈 필터링 — 3m 미만 이동은 포인트 추가 생략, Android는 Foreground Notification + WakeLock으로 백그라운드 추적 유지',
+        ],
+      },
+      {
+        title: '2. Flutter 모바일 앱 UI/UX 및 실시간 지도 연동',
+        points: [
+          'flutter_naver_map 기반 다크 네온 UI — 점령 폴리곤(네온 그린), 실시간 경로(점선 폴리라인), 현재 위치 마커 커스텀 위젯 오버레이',
+          'MapController + ChangeNotifier 패턴 — 트래킹 상태·완료 영역·현재 위치·bearing을 단일 컨트롤러에서 관리, 지도 오버레이 동기화',
+          '트래킹 중 bearing 기반 카메라 추적 — Geolocator.bearingBetween으로 진행 방향 회전, zoom 17 실시간 팔로우',
+          '듀얼 런 모드 — 땅따먹기: 종료 시 Supabase 저장 + 면적 계산 / 드로잉: 저장 없이 경로만 유지, RepaintBoundary로 지도 PNG 캡처 후 share_plus 공유',
+          '3-2-1 카운트다운 → 모드 선택 바텀시트 → 기록 중 실시간 거리·면적 칩 표시 → 기록 화면에서 일별 카드 + 전체/개별 공유 링크 생성',
+        ],
+      },
+      {
+        title: '3. Supabase + PostGIS 백엔드 및 공유 웹',
+        points: [
+          'DB 스키마 설계 — runs(경로 JSONB + geometry + territory_geojson), user_territory(누적 영역), auth.users 연동 트리거',
+          'upsert_user_territory RPC — ST_GeomFromGeoJSON + ST_Union으로 회차 영역을 누적 병합, auth.uid() 검증으로 본인만 쓰기 허용',
+          'RLS 정책 — 쓰기는 본인만, 읽기는 공개(select using true) → 공유 웹에서 anon key로 타인 기록 조회 가능',
+          'Firebase Hosting 공유 웹 — Leaflet.js + OSM 타일, /share/{userId} / /share/{userId}/{runId} SPA rewrite',
+          '사이드바에 일별 러닝 카드 + 총 점령 면적 표시, 카드 클릭 시 해당 폴리곤 하이라이트 + fitBounds — 모바일 반응형(지도 60vh / 사이드바 40vh)',
+        ],
+      },
+      {
+        title: '4. 인증·품질 보증·배포 준비',
+        points: [
+          'Google OAuth — google_sign_in + Supabase signInWithIdToken, Google 브랜딩 가이드라인 준수 SVG 로그인 버튼',
+          'TDD 기반 핵심 로직 테스트 — TerritoryCalculator(루프/직선/엣지케이스 3건), TrackingService(최소 이동 거리·stop 초기화 3건) 유닛 테스트',
+          'Superpowers 방법론 적용 — brainstorming → writing-plans → TDD → verification 파이프라인으로 설계·구현·검증 분리',
+          '스토어 배포 스캐폴드 — Android 릴리스 서명(key.properties), .env.example, privacy.html 호스팅, deployment-prep.md 체크리스트 작성',
+          '스플래시 애니메이션 — 바운스·발자국·속도선 커스텀 페인터, 세션 유무에 따라 로그인/지도 화면 자동 분기',
+        ],
+      },
+    ],
+  },
 }
