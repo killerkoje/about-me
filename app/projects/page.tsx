@@ -3,6 +3,7 @@ import ProjectsTabs from '@/components/portfolio/ProjectsTabs'
 import Link from 'next/link'
 
 const EXCLUDED_REPOS = [
+  'about-me',
   'content-hub-front',
   'dubright_backend',
   'video-encoder',
@@ -57,10 +58,10 @@ const EXCLUDED_REPOS = [
   'kid_dobedub',
   'kids_front',
   'pickme_teaser_front',
+  'statistics-front',
 ]
 
 const SIDE_PROJECTS = [
-  'about-me',
   'Cultural-Heritage-Outing',
   'village-run',
   'lucky-defense',
@@ -74,6 +75,8 @@ const SIDE_PROJECTS = [
   'AX_TEST',
   'panorama_app',
   'horror_game',
+  'kakao_mcp_gift_find',
+  'kakao_mcp_server',
 ]
 
 export default async function ProjectsPage() {
