@@ -62,6 +62,7 @@ const EXCLUDED_REPOS = [
 ]
 
 const SIDE_PROJECTS = [
+  'obsidian_chat_bot',
   'Cultural-Heritage-Outing',
   'village-run',
   'lucky-defense',

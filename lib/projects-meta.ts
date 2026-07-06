@@ -152,6 +152,94 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
       },
     ],
   },
+  obsidian_chat_bot: {
+    description:
+      'Obsidian vault + Notion/PDF를 Qdrant·BGE-M3 hybrid RAG로 검색하고, 증분 인덱싱·OCR Docker·Obsidian 플러그인까지 포함한 사내 지식 검색 챗봇 설계·구현',
+    highlights: [
+      'Obsidian vault(notion/**/*.md) hybrid 검색 + rerank + LLM 채팅 — Next.js 16 기반 사내 지식 검색',
+      'Qdrant(Docker) HNSW cosine 검색 — vectors.json에서 검색 엔진 분리로 확장성·속도 개선',
+      'BGE-M3(1024차, multilingual) + bge-reranker-v2-m3 cross-encoder 2단 retrieval — 한국어 문서 검색 품질 개선',
+      '증분 인덱싱(index-manifest.json) — 전체 재인덱싱 8분+ → 변경 1건 ~3초, Obsidian 플러그인 offline fallback',
+    ],
+    details: [
+      {
+        title: '1. 회사 문서 RAG 시스템 설계·구축',
+        points: [
+          'Obsidian vault(notion/**/*.md)를 인덱싱해 hybrid 검색 + rerank + LLM 채팅으로 질의응답',
+          'Next.js 16 기반 웹 UI + /api/search · /api/chat API',
+          '런타임에는 vault md를 다시 읽지 않고 Qdrant(또는 offline JSON)에서 청크 조회',
+        ],
+      },
+      {
+        title: '2. Qdrant 벡터 DB 도입',
+        points: [
+          '로컬 Docker Qdrant(company-rag 컬렉션)로 청크·임베딩 저장',
+          'HNSW cosine 검색으로 top-K recall',
+          'vectors.json 파일 방식에서 검색 엔진 분리 — 확장성·검색 속도 개선',
+        ],
+      },
+      {
+        title: '3. 임베딩 모델 업그레이드 (MiniLM → BGE-M3)',
+        points: [
+          'Xenova/bge-m3(1024차, multilingual) 임베딩 적용',
+          'bge-reranker-v2-m3 cross-encoder 2단 retrieval 파이프라인',
+          '1차 Hybrid Recall(키워드 + 시맨틱) → 2차 Rerank로 한국어 회의록·문서 검색 품질 개선',
+        ],
+      },
+      {
+        title: '4. PDF·이미지 문서 RAG 파이프라인',
+        points: [
+          'OpenDataLoader + hybrid OCR Docker(odp-hybrid)로 스캔 PDF/이미지 → sidecar md 변환',
+          '기존 텍스트 RAG와 동일 검색 경로로 통합',
+          'Obsidian PDF++ pageNumber 연동',
+        ],
+      },
+      {
+        title: '5. 증분 인덱싱 구현',
+        points: [
+          'index-manifest.json(mtime/size/qdrantPaths) 기반 diff로 변경 파일만 임베딩·Qdrant patch',
+          '전체 재인덱싱 8분+ → 변경 1건 ~3초 수준으로 단축',
+        ],
+      },
+      {
+        title: '6. Notion → Obsidian export + 링크 그래프',
+        points: [
+          'Notion API bulk export로 vault 동기화',
+          'notion_link / wikilink 기반 graph.json 구축',
+          '검색 시 1-hop 이웃 노트 context 확장',
+        ],
+      },
+      {
+        title: '7. Obsidian Company RAG 플러그인',
+        points: [
+          '사이드바 Lookup UI, /api/search 연동',
+          'API 장애 시 .company-rag/ offline fallback(키워드 + 그래프 확장)',
+        ],
+      },
+      {
+        title: '8. 인프라·DX',
+        points: [
+          'docker-compose(Qdrant + OCR hybrid) 로컬 개발 환경 구성',
+          'Java 자동 탐지(IDE 터미널 PATH 이슈 대응)',
+          'CLI(index, pdf:export, sync-index, --full) · .env 기반 설정',
+        ],
+      },
+      {
+        title: '9. 아키텍처 문서화',
+        points: [
+          'README에 유저 검색 → Qdrant → LLM / CLI 인덱싱 / vectors·graph JSON 역할을 mermaid·표로 정리',
+          '팀 온보딩·운영 가이드 작성',
+        ],
+      },
+      {
+        title: '10. 실전 검증·한계 분석',
+        points: [
+          'test_pdf 논문·앱리뷰·엑셀 강의표 등 문서 타입별 OCR 품질 비교',
+          'RAG 질문 표현에 따른 retrieval 실패 원인 분석(인덱싱 vs 검색 단계 분리)',
+        ],
+      },
+    ],
+  },
   harness_build: {
     description: 'Claude Code 기반 전사 AI 개발 하네스 — 자연어 한 줄로 기획 확인부터 커밋까지 자동 실행',
     highlights: [
