@@ -154,12 +154,12 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
   },
   obsidian_chat_bot: {
     description:
-      'Obsidian vault + Notion/PDF를 Qdrant·BGE-M3 hybrid RAG로 검색하고, 증분 인덱싱·OCR Docker·Obsidian 플러그인까지 포함한 사내 지식 검색 챗봇 설계·구현',
+      'Obsidian vault + Notion/PDF를 Qdrant·BGE-M3 hybrid RAG로 검색하고, Hermes Agent MCP 멀티스텝·증분 인덱싱·OCR Docker·Obsidian 플러그인까지 포함한 사내 지식 검색 챗봇 설계·구현',
     highlights: [
       'Obsidian vault(notion/**/*.md) hybrid 검색 + rerank + LLM 채팅 — Next.js 16 기반 사내 지식 검색',
       'Qdrant(Docker) HNSW cosine 검색 — vectors.json에서 검색 엔진 분리로 확장성·속도 개선',
-      'BGE-M3(1024차, multilingual) + bge-reranker-v2-m3 cross-encoder 2단 retrieval — 한국어 문서 검색 품질 개선',
-      '증분 인덱싱(index-manifest.json) — 전체 재인덱싱 8분+ → 변경 1건 ~3초, Obsidian 플러그인 offline fallback',
+      'Hermes Agent MCP 멀티스텝 RAG — obsidian_rag_search · read_vault_note 도구로 1질문 N스텝 검색',
+      '3채널 접근(웹 UI / Hermes Dashboard / Obsidian 플러그인) — 동일 company-rag 인덱스 공유',
     ],
     details: [
       {
@@ -236,6 +236,69 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
         points: [
           'test_pdf 논문·앱리뷰·엑셀 강의표 등 문서 타입별 OCR 품질 비교',
           'RAG 질문 표현에 따른 retrieval 실패 원인 분석(인덱싱 vs 검색 단계 분리)',
+        ],
+      },
+      {
+        title: '11. Hermes Agent MCP 연동 (멀티스텝 RAG)',
+        points: [
+          'Hermes Agent를 에이전트 레이어로 붙여, 기존 Qdrant RAG를 MCP 도구로 노출',
+          'obsidian_rag_search — hybrid + rerank 검색을 여러 번 호출 가능 (1질문 N스텝)',
+          'read_vault_note — 검색 스니펫이 아닌 vault md 전문 읽기 후 요약',
+          'stdio MCP 서버(scripts/mcp-server.ts) + @modelcontextprotocol/sdk 구현',
+        ],
+      },
+      {
+        title: '12. 에이전트 vs 1회 RAG 아키텍처 분리',
+        points: [
+          '웹 UI(/api/chat): 검색 1회 → LLM 답변 1회 (Cursor SDK)',
+          'Hermes: 도구 호출 루프 → 검색·읽기·재검색 → 최종 답변 (Nous LLM)',
+          '동일 Qdrant 인덱스 공유 — RAG 엔진과 에이전트 역할 분리',
+          'Next.js = 검색 본체, Hermes = 오케스트레이션',
+        ],
+      },
+      {
+        title: '13. Hermes 설정·운영 자동화',
+        points: [
+          'npm run hermes:setup — ~/.hermes/config.yaml에 MCP + toolsets 병합',
+          'hermes/config.fragment.yaml 템플릿 + .env.local 값 자동 치환',
+          'npm run hermes:chat / hermes:dashboard — PATH 보정 포함 npm 스크립트',
+          'hermes/AGENTS.md — vault 우선·멀티스텝·web/terminal 사용 규칙',
+        ],
+      },
+      {
+        title: '14. Nous Portal OAuth + hosted tools',
+        points: [
+          'Quick Setup OAuth로 LLM API 키 없이 Hermes 연동',
+          'Free tier + step-3.7-flash:free 모델 사용',
+          'web_search / web_extract — Firecrawl gateway (vault 밖 정보 보완)',
+          'terminal — 로컬 read-only 운영 점검 (Qdrant 상태 등)',
+        ],
+      },
+      {
+        title: '15. Hermes Web Dashboard 연동',
+        points: [
+          'hermes dashboard → 127.0.0.1:9119 브라우저 UI',
+          '채팅·세션·MCP·모델 설정을 CLI 없이 관리',
+          'Dashboard 채팅에서 mcp-obsidian_rag 도구 호출로 웹에서 멀티스텝 RAG 사용',
+          'Gateway(Telegram/Slack)는 미연동 — CLI/Dashboard 전용',
+        ],
+      },
+      {
+        title: '16. 3채널 RAG 접근 경로',
+        points: [
+          'Next.js 웹 UI — Cursor SDK, 1회 hybrid+rerank',
+          'Hermes Dashboard — Nous Portal, MCP 멀티스텝',
+          'Obsidian 플러그인 — LLM 없음, /api/search only',
+          '한 인덱스(company-rag)로 웹·에이전트·Obsidian 동시 서비스',
+        ],
+      },
+      {
+        title: '17. 비용·성능 트레이드오프 분석',
+        points: [
+          '로컬 RAG 검색(MCP) — Nous 과금 없음 (CPU bge-m3 + rerank)',
+          'LLM·web_search — Nous Portal 크레딧 pay-as-you-go',
+          '멀티스텝 = 검색 품질↑, latency↑ (cold start 60~90초 + 턴당 LLM)',
+          'Cursor(웹) vs Nous(Hermes) 과금 경로 분리 문서화',
         ],
       },
     ],
