@@ -11,14 +11,24 @@ export type ProjectMeta = {
 
 export const PROJECT_META: Record<string, ProjectMeta> = {
   vogopang_front: {
-    description: '보고팡 프론트엔드 — 플레이어 성능 개선 및 Web Vitals 최적화 담당',
+    description:
+      '플랫폼 AX팀 · 보고팡 — AX 워크플로우 기반 플레이어 성능 개선 및 Web Vitals 최적화 (Slow 4G Performance 96점)',
     highlights: [
-      '청크 기반 오디오 레이지 로딩 구현',
-      'Lighthouse 자동화 성능 측정 환경 구축',
-      'Next.js Image 최적화 (WebP·CLS 개선)',
-      'Web Vitals 로깅 시스템 구축',
+      'AX팀 기반 워크플로우 적용',
+      '「모바일 느려요」→ Lighthouse 수치화·스펙 확정 후 개선 착수',
+      '테스트 선행 — 청크 로딩·URL 정규화, Slow 4G Performance 96점(FCP 2239ms)',
+      'Web Vitals 로깅·대시보드 — 측정→개선→회고 사이클 정착',
     ],
     details: [
+      {
+        title: 'AX팀 기반 워크플로우',
+        points: [
+          '「모바일 느려요」→ Lighthouse 수치화·스펙 확정 후 개선 착수',
+          '테스트 선행 — 청크 로딩·URL 정규화 정의, Slow 4G Performance 96점(FCP 2239ms)',
+          '베이스라인 Notion 공유 — PM/디자이너 수치 기준 합의, 튜닝·회의 시간 절감',
+          'Web Vitals 로깅·대시보드 — 측정→개선→회고 사이클 정착',
+        ],
+      },
       {
         title: '1. 청크 기반 오디오 레이지 로딩 구현',
         points: [
@@ -74,14 +84,24 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
     ],
   },
   pudding_front: {
-    description: '푸딩툰 프론트엔드 — 콘텐츠 도메인 전반 UI 구현 및 성능 최적화 담당',
+    description:
+      '플랫폼 AX팀 · 푸딩툰 — AX 워크플로우 기반 콘텐츠 도메인 UI·React Query·번들 최적화 (LCP 21.9s→6.8s)',
     highlights: [
-      '웹툰/보이스툰/아티스트/MUSIC 도메인 페이지 전체 구현',
-      'React Query 전면 도입 및 서버 컴포넌트 전환으로 번들 최적화',
-      '미디어 플레이어 버그 수정 및 UX 개선',
-      '320px 기준 모바일/태블릿/데스크톱 반응형 UI 구축',
+      'AX팀 기반 워크플로우 적용',
+      'fetch 패턴 inventory → React Query 도입(10영역) 스펙·테스트 선행 후 refactor',
+      '공통 신고 훅·컴포넌트 패턴화 — 유사 화면 개발 리드타임 단축',
+      '번들 최적화 LCP 21.9s→6.8s, TBT 9.1s→550ms',
     ],
     details: [
+      {
+        title: 'AX팀 기반 워크플로우',
+        points: [
+          'fetch 패턴 inventory → React Query 도입(10영역) 스펙·테스트 선행 후 refactor 주도',
+          '공통 신고 훅·컴포넌트 패턴화 — 유사 화면 개발 리드타임 단축',
+          '스펙 정리 후 번들 최적화 — Dynamic import·서버 컴포넌트 (LCP 21.9s→6.8s, TBT 9.1s→550ms)',
+          'fetch·에러·반응형 컨벤션을 코드베이스 공통 패턴으로 축적·재사용',
+        ],
+      },
       {
         title: '1. 콘텐츠 도메인 페이지 개발',
         points: [
@@ -352,14 +372,24 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
     ],
   },
   dubright_front: {
-    description: 'Vue 3 + Pinia 기반 더빙/성우 관리 플랫폼 DubRight 프론트엔드 개발 (2026.04 ~ 2026.06)',
+    description:
+      '플랫폼 AX팀 · DubRight — AX 워크플로우 기반 더빙/성우 관리 UI·검수 성능 최적화 (Vue 3)',
     highlights: [
-      '구간 마커 Drag & Drop 시스템 및 씬 저장·복원 설계·구현',
-      'Intersection Observer 기반 오디오 Lazy Loading으로 렌더링 최적화',
-      '오디오/이미지 청크 단위 병렬 로딩 유틸 구현',
-      '검수 권한 분리 및 핵심 버그 5건 수정',
+      'AX팀 기반 워크플로우 적용',
+      '모호 요구(검수 속도·구간 저장) → 스펙·질문 리스트 정리 후 착수',
+      '스펙·테스트 선행 — 구간 마커 DnD·권한별 UI, Intersection Observer 검수 최적화',
+      'parallelLoad·권한 분리 패턴 자산화 — 핵심 버그 5건 수정',
     ],
     details: [
+      {
+        title: 'AX팀 기반 워크플로우',
+        points: [
+          '모호 요구(검수 속도·구간 저장) → 스펙·질문 리스트 정리 후 착수',
+          '스펙·테스트 선행 — 구간 마커 겹침·권한별 UI 고정 후 DnD·씬 저장·복원',
+          '코드 분석으로 수백 트랙 병목 특정 → Intersection Observer 적용, 검수 효율 개선',
+          'parallelLoad·권한 분리 패턴 자산화 — 핵심 버그 5건 수정',
+        ],
+      },
       {
         title: '1. 마이보이스 — 구간 마커 시스템 (Drag & Drop)',
         points: [
