@@ -62,24 +62,7 @@ const EXCLUDED_REPOS = [
   'statistics-front',
 ]
 
-const SIDE_PROJECTS = [
-  'obsidian_chat_bot',
-  'Cultural-Heritage-Outing',
-  'village-run',
-  'lucky-defense',
-  'nugu-seyo',
-  'face-fortune',
-  'call-distance-tracker',
-  'legal-recorder-hybrid',
-  'gomoku_algorithm_test',
-  'llm_test',
-  'AX_TEST',
-  'panorama_app',
-  'horror_game',
-  'kakao_mcp_gift_find',
-  'kakao_mcp_server',
-  'web-vital-cheking',
-]
+const FEATURED_SIDE_PROJECTS = ['obsidian_chat_bot', 'web-vital-cheking']
 
 export default async function ProjectsPage() {
   const token = process.env.GITHUB_TOKEN
@@ -113,10 +96,10 @@ export default async function ProjectsPage() {
     }
   )
 
-  const sideRepos = repos.filter(r => SIDE_PROJECTS.includes(r.name))
-  const companyRepos = [
-    ...curatedCompanyRepos,
-    ...repos.filter(r => !SIDE_PROJECTS.includes(r.name) && !curatedNames.has(r.name)),
+  const companyRepos = curatedCompanyRepos
+  const sideRepos = [
+    ...FEATURED_SIDE_PROJECTS.flatMap(name => repos.filter(r => r.name === name)),
+    ...repos.filter(r => !curatedNames.has(r.name) && !FEATURED_SIDE_PROJECTS.includes(r.name)),
   ]
 
   // 언어 통계 병렬 fetch (실패한 레포는 무시)
