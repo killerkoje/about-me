@@ -16,7 +16,7 @@ export default async function ProjectDetailPage({ params }: Props) {
       <header className="flex sm:hidden items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
         <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">Portfolio</span>
         <nav className="flex items-center gap-4">
-          <a href="https://github.com/LEEHEEWON123" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-900">Github.</a>
+          <a href="https://github.com/killerkoje" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-900">Github.</a>
           <a href="https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-900">LinkedIn.</a>
           <a href="/projects" className="text-xs text-black font-semibold">Projects.</a>
         </nav>
@@ -27,7 +27,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">Portfolio</span>
         <nav className="flex flex-col gap-4">
           <a
-            href="https://github.com/LEEHEEWON123"
+            href="https://github.com/killerkoje"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-gray-900 hover:text-black transition-colors duration-200"

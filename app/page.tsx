@@ -24,7 +24,7 @@ export default function Home() {
   }, [])
 
   const navLinks = [
-    { label: 'Github.', href: 'https://github.com/LEEHEEWON123', external: true },
+    { label: 'Github.', href: 'https://github.com/killerkoje', external: true },
     { label: 'LinkedIn.', href: 'https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/', external: true },
     { label: 'Projects.', href: '/projects', external: false },
   ]
@@ -107,7 +107,7 @@ export default function Home() {
               transition: 'opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s',
             }}
           >
-            Developer
+            AX Engineer
           </p>
 
           {/* 이름 + 가상공간 버튼 */}
@@ -133,11 +133,11 @@ export default function Home() {
               transition: 'opacity 0.7s ease 0.45s, transform 0.7s ease 0.45s',
             }}
           >
-            제가 만든 서비스에 접속하는 누구나<br />
-            설명없이 간편하고 쉽게 이용할 수 있습니다.<br />
-            끊임없이 아이디어를 내고 설명이 필요없고<br />
-            간편하며 임팩트 있는 서비스를 구성하는<br />
-            개발자를 꿈꾸고 있습니다.
+            현업의 반복 업무를 찾아 AI 에이전트로 바꾸고,<br />
+            실제로 쓰이게 운영하는 AX 엔지니어입니다.<br />
+            프론트엔드 개발자로 시작해 현업이 쓰는 화면까지 직접 만들고,<br />
+            지금은 광고 소재 생산과 사내 데이터 조회를<br />
+            에이전트로 자동화하고 있습니다.
           </p>
         </div>
       </main>

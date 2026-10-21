@@ -507,9 +507,9 @@ function AboutContent() {
     <>
       <p style={S.tag}>🏠 소개</p>
       <h2 style={S.h2}>이희원</h2>
-      <p style={S.sub}>Frontend Developer</p>
+      <p style={S.sub}>AX Engineer</p>
       <p style={{ fontSize: '14px', lineHeight: '2.1', color: '#555', whiteSpace: 'pre-line' }}>
-        {'제가 만든 서비스에 접속하는 누구나\n설명없이 간편하고 쉽게 이용할 수 있습니다.'}
+        {'현업의 반복 업무를 찾아 AI 에이전트로 바꾸고,\n실제로 쓰이게 운영하는 AX 엔지니어입니다.'}
       </p>
     </>
   )
@@ -533,7 +533,7 @@ function SkillsContent() {
       <p style={S.tag}>⚡ 스킬</p>
       <h2 style={S.h2}>기술 스택</h2>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-        {['React / Next.js', 'TypeScript', 'Three.js / R3F', 'Tailwind CSS'].map((s) => (
+        {['LLM 워크플로우 · MCP', 'Claude Code', 'RAG · bge-m3 · Qdrant', 'Python · FastAPI', 'PostgreSQL', 'TypeScript', 'React / Next.js', 'Vue 3'].map((s) => (
           <span key={s} style={{ background: '#f7f7f7', border: '1.5px solid #ebebeb', borderRadius: '20px', padding: '8px 16px', fontSize: '13px', fontWeight: 600 }}>{s}</span>
         ))}
       </div>
@@ -546,7 +546,7 @@ function ContactContent() {
     <>
       <p style={S.tag}>📬 연락처</p>
       <h2 style={S.h2}>연락하기</h2>
-      <a href="https://github.com/LEEHEEWON123" target="_blank" rel="noreferrer" style={{ color: '#333', fontWeight: 600 }}>GitHub →</a>
+      <a href="https://github.com/killerkoje" target="_blank" rel="noreferrer" style={{ color: '#333', fontWeight: 600 }}>GitHub →</a>
     </>
   )
 }

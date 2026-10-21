@@ -9,19 +9,198 @@ export type ProjectMeta = {
   details: ProjectDetail[]
 }
 
+export type CompanyProject = {
+  name: string
+  language?: string
+}
+
+// 회사 레포는 GitHub 토큰 계정에서 보이지 않을 수 있어 이력서 순서대로 고정한다.
+export const COMPANY_PROJECTS: CompanyProject[] = [
+  { name: 'ad-variant-agent', language: 'TypeScript' },
+  { name: 'erp_chatbot', language: 'TypeScript' },
+  { name: 'ax_workflow' },
+  { name: 'harness_build', language: 'Python' },
+  { name: 'vogopang_front', language: 'TypeScript' },
+  { name: 'dubright_front', language: 'Vue' },
+  { name: 'pudding_front', language: 'TypeScript' },
+]
+
 export const PROJECT_META: Record<string, ProjectMeta> = {
-  vogopang_front: {
+  'ad-variant-agent': {
     description:
-      '플랫폼 AX팀 · 보고팡 — AX 워크플로우 기반 플레이어 성능 개선 및 Web Vitals 최적화 (Slow 4G Performance 96점)',
+      '원정대 AI/AX 혁신팀 · PSD 원본 재현 렌더(Skia)·LaMa 여백 확장·페르소나 카피로 광고 이미지를 대량 재생산하는 에이전트 (하루 150~200장 → 600~700장)',
     highlights: [
-      'AX팀 기반 워크플로우 적용',
-      '「모바일 느려요」→ Lighthouse 수치화·스펙 확정 후 개선 착수',
-      '테스트 선행 — 청크 로딩·URL 정규화, Slow 4G Performance 96점(FCP 2239ms)',
-      'Web Vitals 로깅·대시보드 — 측정→개선→회고 사이클 정착',
+      'PSD 서체·글자별 색·자간·레이어 효과 직접 파싱 → Skia 원본 재현 렌더로 Adobe 라이선스 의존 제거',
+      '비율 변경 시 제품 위치 고정·여백만 LaMa 확장, 세이프 영역 검사 실패 시 자동 거절',
+      '검수자가 고른 카피를 지식베이스에 축적해 다음 생성 근거로 재사용 — 쓸수록 품질 상승',
+      '하루 생산량 150~200장 → 600~700장 (약 3~4배)',
     ],
     details: [
       {
-        title: 'AX팀 기반 워크플로우',
+        title: '프로젝트 개요',
+        points: [
+          '기간: 2026.09 — 진행중 (운영 중)',
+          '역할: 단독 기획·설계·개발·운영',
+          '기술: Next.js · FastAPI · Skia · LaMa · Claude Code',
+          '마케터는 자연어 한 줄로 변주를 뽑고, 검수자는 쓸 장만 선택하는 흐름',
+        ],
+      },
+      {
+        title: '문제 정의',
+        points: [
+          '배너 변주는 포토샵에서 PSD를 직접 수정해야 해 Adobe 라이선스가 전제였고, 수작업이라 하루 150~200장이 한계',
+          '다른 연령·성별을 공략하려면 기존 소재를 재활용하지 못하고 처음부터 다시 기획해야 했음',
+          '목표: PSD 파일만으로 ① 배너 비율 변경 ② 문구 교체를 라이선스 없이 대량 생산하고, ③ 소재의 타겟 세그먼트 자체를 전환',
+        ],
+      },
+      {
+        title: '1. PSD 원본 재현 렌더',
+        points: [
+          'PSD의 서체·글자별 색·자간·레이어 효과를 직접 파싱해 Skia로 원본 재현 렌더',
+          '포토샵 없이 비율 변경·문구 교체 처리 — Adobe 의존 제거',
+        ],
+      },
+      {
+        title: '2. 비율 변경·타겟 전환',
+        points: [
+          '비율 변경은 제품 위치를 고정하고 여백만 LaMa 인페인팅으로 확장',
+          '세이프 영역 검사에서 불가하면 결과를 내지 않고 거절',
+          '상품 URL·이미지·텍스트를 읽어 페르소나 기반으로 카피와 이미지 소재를 함께 재생성',
+        ],
+      },
+      {
+        title: '3. AI 오작동 통제',
+        points: [
+          '모델 권한 최소화 — 모델은 문구·서체·소재 선택만 결정',
+          'AI가 제품·서체를 왜곡하지 않도록 렌더·검사 단계를 코드로 고정',
+          '검사 실패 시 자동 거절',
+        ],
+      },
+      {
+        title: '4. 쓸수록 품질이 올라가는 구조',
+        points: [
+          '광고 도메인 직접 학습(제일기획 등 대행사 자료, 토스애즈 공개 카피 프롬프팅 작성법) → 프롬프트·페르소나 설계에 반영',
+          '검수자가 고른 카피를 지식베이스에 적재해 다음 생성의 근거로 재사용',
+          '검수자의 선택 자체를 품질 신호로 사용 — 쓰면 쓸수록 카피 품질이 올라감',
+        ],
+      },
+      {
+        title: '5. 성과',
+        points: [
+          '비용 — 비율 변경·문구 교체를 Adobe 라이선스 없이 처리해 해당 작업의 라이선스·외주 비용 제거',
+          '생산량 — 하루 150~200장 → 600~700장 (약 3~4배)',
+          '매출 기회 — 10대 여성 타겟 소재를 60대 남성 타겟의 이미지·문구로 전환, PSD 자산 하나로 다른 세그먼트 공략',
+          '타겟별 소재 실험 횟수 제약 해소 (이전에는 불가능)',
+        ],
+      },
+      {
+        title: '6. 다음 단계',
+        points: ['광고 심사 자동화(정책 위반 탐지·반려 사유 생성) 설계 중'],
+      },
+    ],
+  },
+  erp_chatbot: {
+    description:
+      '원정대 AI/AX 혁신팀 · 수십 개 테이블 규모 사내 CRM을 직원이 자연어로 조회하는 챗봇 — 응답 77.1s → 29.0s (내부 테스트 기준)',
+    highlights: [
+      '직원이 검증한 질문·SQL을 지식베이스로 축적, bge-m3 의미+키워드 하이브리드 검색으로 재활용',
+      '별도 벡터 DB 없이 PostgreSQL로 구현',
+      '읽기 전용 SQL 가드·업무 범위 제한, 도구 호출 형식 오류 서버 보정 (도구 실패 0건)',
+      '구간별 실측으로 병목 특정 → 응답 77.1s→29.0s, 첫 글자 6.8s→2.5s',
+    ],
+    details: [
+      {
+        title: '프로젝트 개요',
+        points: [
+          '기간: 2026.10 — 진행중 (내부 테스트 중)',
+          '역할: 단독 설계·개발',
+          '기술: React · TypeScript · PostgreSQL · MySQL · bge-m3 · Claude Code',
+          '수십 개 테이블 규모의 사내 CRM을 직원이 자연어로 조회 — 전사 사용 규모 기준으로 설계',
+        ],
+      },
+      {
+        title: '1. 검증 사례 지식베이스',
+        points: [
+          '직원이 검증한 질문·SQL을 사내 지식베이스로 축적',
+          '의미+키워드 하이브리드 검색(bge-m3)으로 비슷한 검증 사례를 답변에 활용',
+          '별도 벡터 DB 없이 PostgreSQL로 구현',
+        ],
+      },
+      {
+        title: '2. AI 오작동 통제',
+        points: [
+          '읽기 전용 SQL 가드·업무 범위 제한',
+          '도구 호출 형식 오류를 서버에서 보정 — 내부 테스트 기준 도구 실패 0건',
+        ],
+      },
+      {
+        title: '3. 응답 속도 개선',
+        points: [
+          '문제: 자연어 질문 하나에 응답까지 77초가 걸려 실사용이 어려운 상태',
+          '구간별 지연 실측으로 모델 대기가 99.9%임을 확인',
+          '모델 호출 경량화·조회 병렬화·스키마 사전 적재, 검증된 질문·SQL 사례 재활용',
+          '응답 77.1s → 29.0s, 첫 글자 6.8s → 2.5s (내부 테스트 기준)',
+        ],
+      },
+      {
+        title: '4. 다음 단계',
+        points: ['웹 검색 확장 대비 할루시네이션 통제 설계 중 — 사실과 추론을 분리한 답변 구조'],
+      },
+    ],
+  },
+  ax_workflow: {
+    description:
+      '원정대 AI/AX 혁신팀 · 개발 프로세스 AX — PRD만 쓰면 AI가 와이어프레임을 생성하고, AI 두 개가 요구사항 빈틈을 교차 확인하는 Claude Code 플러그인 (Wireframe Dashboard · ax_workflow)',
+    highlights: [
+      'PRD → 화면 와이어프레임 자동 생성 — 디자이너 없이 화면 확정',
+      '요구사항이 승인된 경우에만 생성·변경 허용, 변경 이력·부분 재생성으로 개발 인계 흐름 고정',
+      'AI 두 개가 요구사항 빈틈을 교차 확인 — 구현 전 확인할 질문 46개 도출',
+      '근거 없는 결정 자동 표시 검수 단계 + Claude Code 플러그인으로 팀 배포',
+    ],
+    details: [
+      {
+        title: '프로젝트 개요',
+        points: [
+          '기간: 2026.08 — 진행중',
+          '역할: 단독 설계·개발·팀 배포',
+          '기술: Claude Code (서브에이전트·스킬·플러그인)',
+          '구성: Wireframe Dashboard · ax_workflow',
+        ],
+      },
+      {
+        title: '1. PRD → 와이어프레임',
+        points: [
+          '요청자가 요구사항 문서(PRD)만 쓰면 AI가 화면 와이어프레임을 생성 — 디자이너 없이 화면 확정',
+          '요구사항이 승인된 경우에만 생성·변경을 허용',
+          '변경 이력·부분 재생성으로 개발 인계 흐름 고정',
+        ],
+      },
+      {
+        title: '2. 요구사항 교차 검증',
+        points: [
+          'AI 두 개가 요구사항의 빈틈을 각각 찾아 교차 확인',
+          '구현 전에 확인할 질문 46개 도출',
+          '근거 없는 결정을 자동으로 표시하는 검수 단계 포함',
+        ],
+      },
+      {
+        title: '3. 팀 배포',
+        points: ['Claude Code 플러그인으로 포장해 팀에 배포'],
+      },
+    ],
+  },
+  vogopang_front: {
+    description:
+      '두비덥 플랫폼 개발팀 · 보고팡 — 오디오 청크 로딩·Web Vitals 대시보드로 모바일 성능 개선 (Slow 4G Performance 96점, FCP 2239ms)',
+    highlights: [
+      'AI 개발 워크플로우(harness_build) 적용',
+      '「모바일 느려요」→ Lighthouse 수치화·스펙 확정 후 개선 착수',
+      '오디오 청크 로딩(첫 구간 선로드·다음 구간 프리패치) — Slow 4G Performance 96점(FCP 2239ms)',
+      'Web Vitals 로깅·대시보드 — 페이지·도메인별 성능 상시 모니터링, PM·디자이너와 수치 기준 합의',
+    ],
+    details: [
+      {
+        title: 'AI 개발 워크플로우(harness_build) 적용',
         points: [
           '「모바일 느려요」→ Lighthouse 수치화·스펙 확정 후 개선 착수',
           '테스트 선행 — 청크 로딩·URL 정규화 정의, Slow 4G Performance 96점(FCP 2239ms)',
@@ -85,20 +264,20 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
   },
   pudding_front: {
     description:
-      '플랫폼 AX팀 · 푸딩툰 — AX 워크플로우 기반 콘텐츠 도메인 UI·React Query·번들 최적화 (LCP 21.9s→6.8s)',
+      '두비덥 플랫폼 개발팀 · 푸딩툰 — 콘텐츠 도메인 UI·React Query 10개 영역 도입·번들 최적화 (모바일 LCP 21.9s→6.8s)',
     highlights: [
-      'AX팀 기반 워크플로우 적용',
-      'fetch 패턴 inventory → React Query 도입(10영역) 스펙·테스트 선행 후 refactor',
-      '공통 신고 훅·컴포넌트 패턴화 — 유사 화면 개발 리드타임 단축',
-      '번들 최적화 LCP 21.9s→6.8s, TBT 9.1s→550ms',
+      'AI 개발 워크플로우(harness_build) 적용',
+      'fetch 패턴 전수 조사 → React Query 10개 영역 도입, 공통 신고 훅·컴포넌트 패턴화',
+      'Dynamic import·서버 컴포넌트로 번들 분리',
+      '모바일 LCP 21.9s→6.8s, TBT 9.1s→550ms, CLS 0.972→0.196',
     ],
     details: [
       {
-        title: 'AX팀 기반 워크플로우',
+        title: 'AI 개발 워크플로우(harness_build) 적용',
         points: [
           'fetch 패턴 inventory → React Query 도입(10영역) 스펙·테스트 선행 후 refactor 주도',
           '공통 신고 훅·컴포넌트 패턴화 — 유사 화면 개발 리드타임 단축',
-          '스펙 정리 후 번들 최적화 — Dynamic import·서버 컴포넌트 (LCP 21.9s→6.8s, TBT 9.1s→550ms)',
+          '스펙 정리 후 번들 최적화 — Dynamic import·서버 컴포넌트 (모바일 LCP 21.9s→6.8s, TBT 9.1s→550ms, CLS 0.972→0.196)',
           'fetch·에러·반응형 컨벤션을 코드베이스 공통 패턴으로 축적·재사용',
         ],
       },
@@ -324,14 +503,26 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
     ],
   },
   harness_build: {
-    description: 'Claude Code 기반 전사 AI 개발 하네스 — 자연어 한 줄로 기획 확인부터 커밋까지 자동 실행',
+    description:
+      '두비덥 플랫폼 개발팀 · 개발팀에 직접 도입한 Claude Code 기반 AI 개발 하네스 — 요구 분석부터 패턴 축적까지 (유사 기능 개발 기간 약 30% 단축)',
     highlights: [
-      '자연어 → TDD 파이프라인 완전 자동화 (기획 확인 → 테스트 선행 → 구현 → 검증 → 패턴 학습)',
-      '10+ 스택 지원 범용 코어 + 스택 플러그인 아키텍처 설계',
-      '기획 레벨 자동 추론 — 키워드 없이 요청 텍스트만으로 mid/high/low 자동 결정',
-      '팀 패턴 학습 시스템 — 커밋 승인 코드에서 패턴 추출 후 .harness/patterns/에 git 공통 자산으로 적재',
+      '요구 분석 → 스펙 → 테스트 선행 → 구현 → QA → 패턴 축적 파이프라인을 팀에 도입',
+      '모호한 요청은 AI가 질문·스펙 초안을 먼저 만들어 구현 전에 PM·기획과 합의',
+      'fetch·훅·네이밍 컨벤션을 git 공통 자산으로 축적해 푸딩툰·DubRight·보고팡에 적용',
+      '유사 기능 개발 기간 약 30% 단축',
     ],
     details: [
+      {
+        title: '팀 도입과 성과',
+        points: [
+          '기간: 2026.06 — 2026.08',
+          '기술: Python · Claude Code · Cursor',
+          '문제: 모호한 요구가 구현 단계에서야 구체화되고, 서비스마다 fetch·훅·네이밍이 달라 비슷한 기능을 매번 새로 개발',
+          'Claude Code·Cursor로 요구 분석 → 스펙 → 테스트 선행 → 구현 → QA → 패턴 축적 파이프라인을 팀에 도입',
+          '모호한 요청은 AI가 질문·스펙 초안을 먼저 만들게 해 PM·기획과 합의 후 구현',
+          '팀의 fetch·훅·네이밍 컨벤션을 git 공통 자산으로 쌓아 푸딩툰·DubRight·보고팡에 적용 — 유사 기능 개발 기간 약 30% 단축',
+        ],
+      },
       {
         title: '1. 자연어 → TDD 파이프라인 설계 및 구현',
         points: [
@@ -373,16 +564,16 @@ export const PROJECT_META: Record<string, ProjectMeta> = {
   },
   dubright_front: {
     description:
-      '플랫폼 AX팀 · DubRight — AX 워크플로우 기반 더빙/성우 관리 UI·검수 성능 최적화 (Vue 3)',
+      '두비덥 플랫폼 개발팀 · DubRight — 더빙 검수 플랫폼, 수백 개 트랙 지연 로드·구간 마커 DnD·씬 저장/복원 (Vue 3)',
     highlights: [
-      'AX팀 기반 워크플로우 적용',
+      'AI 개발 워크플로우(harness_build) 적용',
       '모호 요구(검수 속도·구간 저장) → 스펙·질문 리스트 정리 후 착수',
       '스펙·테스트 선행 — 구간 마커 DnD·권한별 UI, Intersection Observer 검수 최적화',
       'parallelLoad·권한 분리 패턴 자산화 — 핵심 버그 5건 수정',
     ],
     details: [
       {
-        title: 'AX팀 기반 워크플로우',
+        title: 'AI 개발 워크플로우(harness_build) 적용',
         points: [
           '모호 요구(검수 속도·구간 저장) → 스펙·질문 리스트 정리 후 착수',
           '스펙·테스트 선행 — 구간 마커 겹침·권한별 UI 고정 후 DnD·씬 저장·복원',

@@ -1,4 +1,5 @@
-import { fetchUserRepos, fetchRepoLanguages, type GithubLanguages } from '@/lib/github/api'
+import { fetchUserRepos, fetchRepoLanguages, type GithubLanguages, type GithubRepo } from '@/lib/github/api'
+import { COMPANY_PROJECTS } from '@/lib/projects-meta'
 import ProjectsTabs from '@/components/portfolio/ProjectsTabs'
 import Link from 'next/link'
 
@@ -66,7 +67,6 @@ const SIDE_PROJECTS = [
   'Cultural-Heritage-Outing',
   'village-run',
   'lucky-defense',
-  'harness_build',
   'nugu-seyo',
   'face-fortune',
   'call-distance-tracker',
@@ -83,9 +83,7 @@ const SIDE_PROJECTS = [
 
 export default async function ProjectsPage() {
   const token = process.env.GITHUB_TOKEN
-  const username = 'LEEHEEWON123'
-
-  let repos: any[] = []
+  let repos: GithubRepo[] = []
   let error = false
 
   if (token) {
@@ -97,14 +95,35 @@ export default async function ProjectsPage() {
     }
   }
 
+  const curatedNames = new Set(COMPANY_PROJECTS.map(p => p.name))
+  const curatedCompanyRepos: GithubRepo[] = COMPANY_PROJECTS.map((p, i) =>
+    repos.find(r => r.name === p.name) ?? {
+      id: -(i + 1),
+      name: p.name,
+      full_name: p.name,
+      description: null,
+      html_url: '',
+      homepage: null,
+      language: p.language ?? null,
+      stargazers_count: 0,
+      fork: false,
+      private: true,
+      default_branch: 'main',
+      updated_at: '',
+    }
+  )
+
   const sideRepos = repos.filter(r => SIDE_PROJECTS.includes(r.name))
-  const companyRepos = repos.filter(r => !SIDE_PROJECTS.includes(r.name))
+  const companyRepos = [
+    ...curatedCompanyRepos,
+    ...repos.filter(r => !SIDE_PROJECTS.includes(r.name) && !curatedNames.has(r.name)),
+  ]
 
   // 언어 통계 병렬 fetch (실패한 레포는 무시)
-  async function aggregateLanguages(repoList: typeof repos): Promise<GithubLanguages> {
+  async function aggregateLanguages(repoList: GithubRepo[]): Promise<GithubLanguages> {
     if (!token) return {}
     const results = await Promise.allSettled(
-      repoList.map(r => fetchRepoLanguages(token, r.full_name))
+      repoList.filter(r => r.id > 0).map(r => fetchRepoLanguages(token, r.full_name))
     )
     const totals: GithubLanguages = {}
     for (const r of results) {
@@ -142,7 +161,7 @@ export default async function ProjectsPage() {
       <header className="flex sm:hidden items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
         <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">Portfolio</span>
         <nav className="flex items-center gap-4">
-          <a href="https://github.com/LEEHEEWON123" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-900">Github.</a>
+          <a href="https://github.com/killerkoje" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-900">Github.</a>
           <a href="https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-900">LinkedIn.</a>
           <a href="/projects" className="text-xs text-black font-semibold">Projects.</a>
         </nav>
@@ -152,7 +171,7 @@ export default async function ProjectsPage() {
       <aside className="hidden sm:flex w-44 flex-col gap-8 py-10 px-8 bg-white border-r border-gray-100 shrink-0">
         <span className="text-xs font-semibold tracking-widest text-gray-500 uppercase">Portfolio</span>
         <nav className="flex flex-col gap-4">
-          <a href="https://github.com/LEEHEEWON123" target="_blank" rel="noopener noreferrer"
+          <a href="https://github.com/killerkoje" target="_blank" rel="noopener noreferrer"
             className="text-sm text-gray-900 hover:text-black transition-colors duration-200">Github.</a>
           <a href="https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%9D%B4-a22402360/" target="_blank" rel="noopener noreferrer"
             className="text-sm text-gray-900 hover:text-black transition-colors duration-200">LinkedIn.</a>
@@ -172,7 +191,7 @@ export default async function ProjectsPage() {
           {!token && <p className="text-sm text-gray-400">GITHUB_TOKEN 환경변수를 설정해주세요.</p>}
           {error && <p className="text-sm text-red-400">GitHub API 오류가 발생했습니다.</p>}
 
-          {repos.length > 0 && (
+          {companyRepos.length > 0 && (
             <ProjectsTabs
               companyRepos={companyRepos}
               sideRepos={sideRepos}

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "이희원 | Developer",
-  description: "끊임없이 아이디어를 내고 설명이 필요없는 간편하고 임팩트 있는 서비스를 구성하는 개발자",
+  title: "이희원 | AX Engineer",
+  description: "사내 AI 에이전트 설계·운영 | 업무 자동화 | 프론트엔드 출신으로 현업이 쓰는 화면까지 직접 구현",
 };
 
 export default function RootLayout({
