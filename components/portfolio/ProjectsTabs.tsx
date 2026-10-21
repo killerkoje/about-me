@@ -5,8 +5,13 @@ import Link from 'next/link'
 import { PROJECT_META } from '@/lib/projects-meta'
 import type { GithubRepo, GithubLanguages } from '@/lib/github/api'
 
+type CompanyGroup = {
+  company: string
+  repos: GithubRepo[]
+}
+
 type Props = {
-  companyRepos: GithubRepo[]
+  companyGroups: CompanyGroup[]
   sideRepos: GithubRepo[]
   companyLanguages: GithubLanguages
   sideLanguages: GithubLanguages
@@ -138,16 +143,15 @@ function RepoCard({ repo }: { repo: GithubRepo }) {
   )
 }
 
-export default function ProjectsTabs({ companyRepos, sideRepos, companyLanguages, sideLanguages }: Props) {
+export default function ProjectsTabs({ companyGroups, sideRepos, companyLanguages, sideLanguages }: Props) {
   const [active, setActive] = useState<'company' | 'side' | 'stacks'>('company')
+  const companyCount = companyGroups.reduce((sum, g) => sum + g.repos.length, 0)
 
   const tabs = [
-    { key: 'company', label: 'Company', count: companyRepos.length },
+    { key: 'company', label: 'Company', count: companyCount },
     { key: 'side', label: 'Side Projects', count: sideRepos.length },
     { key: 'stacks', label: 'Stacks', count: null },
   ] as const
-
-  const repos = active === 'company' ? companyRepos : sideRepos
 
   return (
     <div>
@@ -175,13 +179,24 @@ export default function ProjectsTabs({ companyRepos, sideRepos, companyLanguages
 
       {active === 'stacks' ? (
         <StacksView companyLanguages={companyLanguages} sideLanguages={sideLanguages} />
+      ) : active === 'company' ? (
+        <div className="flex flex-col gap-8">
+          {companyGroups.map(group => (
+            <section key={group.company}>
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
+                {group.company}
+                <span className="ml-2 text-[10px] text-gray-300 tabular-nums">{group.repos.length}</span>
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {group.repos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
+              </div>
+            </section>
+          ))}
+        </div>
       ) : (
-        <>
-          {/* 카드 그리드 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {repos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
-          </div>
-        </>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {sideRepos.map(repo => <RepoCard key={repo.id} repo={repo} />)}
+        </div>
       )}
     </div>
   )

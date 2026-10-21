@@ -1,5 +1,5 @@
 import { fetchUserRepos, fetchRepoLanguages, type GithubLanguages, type GithubRepo } from '@/lib/github/api'
-import { COMPANY_PROJECTS } from '@/lib/projects-meta'
+import { COMPANIES, COMPANY_PROJECTS } from '@/lib/projects-meta'
 import ProjectsTabs from '@/components/portfolio/ProjectsTabs'
 import Link from 'next/link'
 
@@ -97,6 +97,10 @@ export default async function ProjectsPage() {
   )
 
   const companyRepos = curatedCompanyRepos
+  const companyGroups = COMPANIES.map(company => ({
+    company,
+    repos: curatedCompanyRepos.filter((_, i) => COMPANY_PROJECTS[i].company === company),
+  }))
   const sideRepos = [
     ...FEATURED_SIDE_PROJECTS.flatMap(name => repos.filter(r => r.name === name)),
     ...repos.filter(r => !curatedNames.has(r.name) && !FEATURED_SIDE_PROJECTS.includes(r.name)),
@@ -176,7 +180,7 @@ export default async function ProjectsPage() {
 
           {companyRepos.length > 0 && (
             <ProjectsTabs
-              companyRepos={companyRepos}
+              companyGroups={companyGroups}
               sideRepos={sideRepos}
               companyLanguages={companyLanguages}
               sideLanguages={sideLanguages}
